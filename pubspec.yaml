@@ -1,12 +1,12 @@
 name: universal_dockit
-
 description: A Flutter plugin for viewing PDF, Word, Excel, PowerPoint, EPUB, CBZ, TXT, CSV, RTF, and OpenDocument files on Android and iOS.
-
 version: 1.0.0
-
 homepage: https://github.com/prathap021/universal_dockit
 repository: https://github.com/prathap021/universal_dockit
 issue_tracker: https://github.com/prathap021/universal_dockit/issues
+documentation: https://github.com/prathap021/universal_dockit#readme
+license: MIT
+changelog: CHANGELOG.md
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -28,6 +28,7 @@ topics:
   - office
   - excel
   - powerpoint
+  - epub
 
 flutter:
   plugin:
