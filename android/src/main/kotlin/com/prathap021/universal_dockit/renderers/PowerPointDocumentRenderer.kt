@@ -22,22 +22,23 @@ internal class PowerPointDocumentRenderer : DocumentRenderer {
         
         append("""
             <style>
-                body { background-color: #f3f3f3; padding: 16px; font-family: sans-serif; }
-                .slide-divider { margin: 24px 0 8px 0; font-weight: bold; color: #555; }
+                .slide-divider { margin: 24px 0 8px 0; font-weight: bold; color: var(--muted); }
                 .slide-content { 
-                    background-color: white; 
-                    border: 1px solid #ccc; 
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
-                    min-height: 400px; 
-                    padding: 32px; 
+                    background-color: var(--surface); 
+                    border: 1px solid var(--border); 
+                    box-shadow: var(--shadow-sm); 
+                    min-height: 200px; 
+                    padding: 16px; 
                     margin-bottom: 24px;
-                    border-radius: 4px;
-                    overflow: hidden;
-                    position: relative;
+                    border-radius: 8px;
+                    overflow-x: hidden;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
                 }
+                .slide-content * { max-width: 100%; }
                 .table-wrapper { overflow-x: auto; margin-top: 16px; }
-                table { border-collapse: collapse; width: 100%; }
-                th, td { border: 1px solid #d0d7e5; padding: 8px; }
+                table { border-collapse: collapse; width: 100%; background: var(--bg); }
+                th, td { border: 1px solid var(--border); padding: 8px; }
             </style>
         """.trimIndent())
         

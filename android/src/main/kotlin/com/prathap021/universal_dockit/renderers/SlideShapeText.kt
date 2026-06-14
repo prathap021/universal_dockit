@@ -57,7 +57,7 @@ internal object SlideShapeText {
                     if (run.isItalic == true) styles.add("font-style: italic")
                     if (run.isUnderlined == true) styles.add("text-decoration: underline")
                     val fontSize = run.fontSize
-                    if (fontSize != null && fontSize > 0) styles.add("font-size: ${fontSize}pt")
+                    if (fontSize != null && fontSize > 0) styles.add("font-size: clamp(12pt, ${fontSize}pt, 7vw)")
                 } catch (_: Exception) {}
                 
                 val runStyle = if (styles.isNotEmpty()) " style='${styles.joinToString(";")}'" else ""
