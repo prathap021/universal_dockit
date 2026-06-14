@@ -123,36 +123,17 @@ Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, 
 
 ### Configuring Document Features
 
-You can configure exactly which features are enabled in the native viewer by passing a `DocumentFeatures` object. The plugin uses a single unified configuration—any features that are applicable to the document being opened will be applied automatically, while non-applicable features are safely ignored.
+By default, the plugin automatically enables all standard viewer features (zooming, searching, page navigation, etc.). You can configure specific features by passing a `DocumentFeatures` object.
 
 ```dart
 await _universalDockitPlugin.openDocument(
   filePath,
   features: const DocumentFeatures(
-    openLocalFile: true,
-    openFromUrl: true,
+    darkMode: true, // Enable native dark mode rendering
     zoomInOut: true,
     search: true,
-    shareDocument: true,
-    fileInformation: true,
-    offlineViewing: true,
-    darkMode: true, // Enable native dark mode rendering
-    
-    // The following features will be applied only if the current 
-    // document format supports them natively:
-    pageNavigation: true,
-    sheetNavigation: true,
-    slideNavigation: true,
-    thumbnails: true,
-    textSelection: true,
-    richTextRendering: true,
-    renderImages: true,
-    renderTables: true,
-    renderHyperlinks: true,
-    cellFormatting: true,
-    freezePanes: true,
-    wordWrap: true,
-    cssSupport: true,
+    // Note: All other features like textSelection, renderImages, etc., 
+    // are enabled by default. Only specify what you want to change!
   ),
 );
 ```
