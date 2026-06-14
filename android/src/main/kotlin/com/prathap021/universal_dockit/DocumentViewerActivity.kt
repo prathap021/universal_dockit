@@ -73,6 +73,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     private lateinit var textScrollView: ScrollView
     private lateinit var textView: TextView
 
+    private lateinit var searchContainer: LinearLayout
+    private lateinit var searchInput: android.widget.EditText
+    private lateinit var searchFab: android.widget.ImageButton
+    private var originalText: CharSequence? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -125,6 +130,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         } else {
             webView.loadDataWithBaseURL(null, finalHtml, "text/html", "UTF-8", null)
         }
+        searchFab.isVisible = true
     }
 
     override suspend fun showText(text: CharSequence, monospace: Boolean) =
@@ -141,7 +147,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             textView.setTextColor(if (darkMode) Color.parseColor("#E0E0E0") else Color.parseColor("#111111"))
             textScrollView.setBackgroundColor(if (darkMode) Color.parseColor("#121212") else Color.WHITE)
             textView.text = text
+            originalText = text
             loadingContainer.isVisible = false
+            searchFab.isVisible = true
         }
 
     override suspend fun showPdf(file: File) = withContext(Dispatchers.Main) {
@@ -194,6 +202,29 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         pdfView?.isVisible = false
         textScrollView.isVisible = false
         errorView.isVisible = false
+        searchFab.isVisible = false
+        searchContainer.isVisible = false
+    }
+
+    private fun highlightTextView(query: String) {
+        if (originalText == null) return
+        if (query.isEmpty()) {
+            textView.text = originalText
+            return
+        }
+        val spannable = android.text.SpannableString(originalText)
+        val lowerText = originalText.toString().lowercase()
+        val lowerQuery = query.lowercase()
+        var index = lowerText.indexOf(lowerQuery)
+        while (index >= 0) {
+            spannable.setSpan(
+                android.text.style.BackgroundColorSpan(Color.YELLOW),
+                index, index + query.length,
+                android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            index = lowerText.indexOf(lowerQuery, index + query.length)
+        }
+        textView.text = spannable
     }
 
     // ── View construction ──────────────────────────────────────────────────
@@ -289,7 +320,93 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
         root.addView(loadingContainer)
 
+        // --- Search UI ---
+        searchFab = android.widget.ImageButton(this).apply {
+            val params = FrameLayout.LayoutParams(160, 160, Gravity.BOTTOM or Gravity.END)
+            params.setMargins(0, 0, 48, 48)
+            layoutParams = params
+            setImageResource(android.R.drawable.ic_menu_search)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(ACCENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
+            scaleType = android.widget.ImageView.ScaleType.CENTER
+            setBackgroundResource(android.R.drawable.btn_default) // Fallback shadow/ripple
+            isVisible = false
+            setOnClickListener {
+                searchContainer.isVisible = true
+                isVisible = false
+                searchInput.requestFocus()
+            }
+        }
+        root.addView(searchFab)
+
+        searchContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = FrameLayout.LayoutParams(MATCH, WRAP, Gravity.TOP)
+            setBackgroundColor(if (darkMode) Color.parseColor("#1E1E1E") else Color.parseColor("#F5F5F5"))
+            elevation = 16f
+            setPadding(24, 24, 24, 24)
+            isVisible = false
+        }
+
+        searchInput = android.widget.EditText(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, WRAP, 1f)
+            hint = "Search document..."
+            setTextColor(if (darkMode) Color.WHITE else Color.BLACK)
+            setHintTextColor(Color.GRAY)
+            isSingleLine = true
+            
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun afterTextChanged(s: android.text.Editable?) {
+                    val query = s?.toString() ?: ""
+                    if (webView.isVisible) {
+                        if (query.isNotEmpty()) webView.findAllAsync(query) else webView.clearMatches()
+                    } else if (textScrollView.isVisible) {
+                        highlightTextView(query)
+                    }
+                }
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            })
+        }
+
+        val btnPrev = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP)
+            setImageResource(android.R.drawable.arrow_up_float)
+            setBackgroundColor(Color.TRANSPARENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
+            setOnClickListener { if (webView.isVisible) webView.findNext(false) }
+        }
+
+        val btnNext = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP)
+            setImageResource(android.R.drawable.arrow_down_float)
+            setBackgroundColor(Color.TRANSPARENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
+            setOnClickListener { if (webView.isVisible) webView.findNext(true) }
+        }
+
+        val btnClose = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP)
+            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
+            setBackgroundColor(Color.TRANSPARENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
+            setOnClickListener {
+                searchContainer.isVisible = false
+                searchFab.isVisible = true
+                searchInput.setText("")
+                if (webView.isVisible) webView.clearMatches()
+                if (textScrollView.isVisible && originalText != null) textView.text = originalText
+            }
+        }
+
+        searchContainer.addView(searchInput)
+        searchContainer.addView(btnPrev)
+        searchContainer.addView(btnNext)
+        searchContainer.addView(btnClose)
+        root.addView(searchContainer)
+
         return root
+    }
 
     private val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
     private val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
