@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -21,9 +20,14 @@ class UniversalDockitExampleApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: Colors.transparent,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: Colors.white,
         fontFamily: 'Poppins',
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF6366F1),
+          secondary: Color(0xFF8B5CF6),
+          surface: Colors.white,
+        ),
       ),
       home: const DocumentPickerScreen(),
     );
@@ -47,19 +51,19 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
   late Animation<double> _fadeAnimation;
 
   static const _quickFormats = [
-    ('PDF', 'pdf'),
-    ('DOC', 'doc'),
-    ('DOCX', 'docx'),
-    ('XLS', 'xls'),
-    ('XLSX', 'xlsx'),
-    ('PPT', 'ppt'),
-    ('PPTX', 'pptx'),
-    ('TXT', 'txt'),
-    ('CSV', 'csv'),
-    ('RTF', 'rtf'),
-    ('ODT', 'odt'),
-    ('ODS', 'ods'),
-    ('ODP', 'odp'),
+    ('PDF', 'pdf', Icons.picture_as_pdf),
+    ('DOC', 'doc', Icons.description),
+    ('DOCX', 'docx', Icons.description),
+    ('XLS', 'xls', Icons.table_chart),
+    ('XLSX', 'xlsx', Icons.table_chart),
+    ('PPT', 'ppt', Icons.slideshow),
+    ('PPTX', 'pptx', Icons.slideshow),
+    ('TXT', 'txt', Icons.text_fields),
+    ('CSV', 'csv', Icons.grid_on),
+    ('RTF', 'rtf', Icons.note),
+    ('ODT', 'odt', Icons.edit_document),
+    ('ODS', 'ods', Icons.table_rows),
+    ('ODP', 'odp', Icons.slideshow),
   ];
 
   @override
@@ -112,8 +116,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
       final path = await _resolveFilePath(file);
       if (path == null) {
         setState(() {
-          _status =
-              '❌ Could not access file. Try again or use a local file copy.';
+          _status = 'Could not access file. Try again or use a local file copy.';
         });
         return;
       }
@@ -122,15 +125,15 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
 
       setState(() {
         _status = success
-            ? '✅ Opened ${file.name}'
-            : '❌ Failed to open document';
+            ? 'Successfully opened ${file.name}'
+            : 'Failed to open document';
       });
     } on ArgumentError catch (e) {
-      setState(() => _status = '❌ ${e.message}');
+      setState(() => _status = 'Error: ${e.message}');
     } on PlatformException catch (e) {
-      setState(() => _status = '❌ ${e.message ?? e.code}');
+      setState(() => _status = 'Error: ${e.message ?? e.code}');
     } catch (e) {
-      setState(() => _status = '❌ Error: $e');
+      setState(() => _status = 'Error: $e');
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -160,7 +163,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
 
       await _openFile(result.files.first);
     } catch (e) {
-      setState(() => _status = '❌ Error: $e');
+      setState(() => _status = 'Error: $e');
       setState(() => _loading = false);
     }
   }
@@ -187,7 +190,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
 
       await _openFile(result.files.first);
     } catch (e) {
-      setState(() => _status = '❌ Error: $e');
+      setState(() => _status = 'Error: $e');
       setState(() => _loading = false);
     }
   }
@@ -195,62 +198,44 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           'Universal Dockit',
           style: TextStyle(
             fontSize: 24,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
             letterSpacing: -0.5,
+            color: Color(0xFF1F2937),
           ),
         ),
         centerTitle: true,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(color: Colors.black.withValues(alpha: 0.3)),
-          ),
-        ),
       ),
       body: Stack(
         children: [
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0F0C29),
-                  Color(0xFF302B63),
-                  Color(0xFF24243E),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 80, 24, 24),
-                  child: Column(
-                    children: [
-                      _buildHeroIcon(),
-                      const SizedBox(height: 32),
-                      if (_status != null) ...[
-                        _buildStatusCard(),
-                        const SizedBox(height: 16),
-                      ],
-                      if (_pickedFile != null) ...[
-                        _buildSelectedFileCard(),
-                        const SizedBox(height: 24),
-                      ],
-                      _buildQuickFormatGrid(),
-                      const SizedBox(height: 24),
-                      _buildActionButton(),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                child: Column(
+                  children: [
+                    _buildHeroIcon(),
+                    const SizedBox(height: 32),
+                    if (_status != null) ...[
+                      _buildStatusCard(),
+                      const SizedBox(height: 16),
                     ],
-                  ),
+                    if (_pickedFile != null) ...[
+                      _buildSelectedFileCard(),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildQuickFormatGrid(),
+                    const SizedBox(height: 24),
+                    _buildActionButton(),
+                  ],
                 ),
               ),
             ),
@@ -263,43 +248,42 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: Colors.black.withValues(alpha: 0.45),
+      color: Colors.black.withValues(alpha: 0.3),
       child: Center(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(
-                    height: 44,
-                    width: 44,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3.5,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Color(0xFFE94560)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Opening document...',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                height: 44,
+                width: 44,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Text(
+                'Opening document...',
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -313,7 +297,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         Text(
           'Quick open by format',
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.7),
+            color: Colors.grey.shade600,
             fontSize: 13,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
@@ -321,21 +305,25 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         ),
         const SizedBox(height: 12),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 10,
           children: _quickFormats.map((entry) {
             final label = entry.$1;
             final ext = entry.$2;
-            return ActionChip(
+            final icon = entry.$3;
+            return FilterChip(
               label: Text(label),
-              onPressed: _loading ? null : () => _pickFormat(ext),
-              backgroundColor: Colors.white.withValues(alpha: 0.1),
-              labelStyle: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              selected: false,
+              onSelected: _loading ? null : (_) => _pickFormat(ext),
+              avatar: Icon(icon, size: 18, color: const Color(0xFF6366F1)),
+              backgroundColor: Colors.grey.shade50,
+              selectedColor: const Color(0xFF6366F1).withValues(alpha: 0.1),
+              labelStyle: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+              side: BorderSide(color: Colors.grey.shade200),
             );
           }).toList(),
         ),
@@ -354,18 +342,15 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
             height: 100,
             width: 100,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFFE94560).withValues(alpha: 0.8),
-                  const Color(0xFF533483).withValues(alpha: 0.8),
-                ],
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
               ),
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFE94560).withValues(alpha: 0.3),
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.3),
                   blurRadius: 30,
                   spreadRadius: 5,
                 ),
@@ -383,32 +368,30 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
   }
 
   Widget _buildStatusCard() {
-    final isSuccess = _status!.startsWith('✅');
+    final isSuccess = _status!.startsWith('Successfully');
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            isSuccess ? const Color(0xFF21BA45) : const Color(0xFFE94560),
-            isSuccess ? const Color(0xFF1B9A3A) : const Color(0xFFC73A52),
-          ],
-        ),
+        color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSuccess ? Colors.green.shade200 : Colors.red.shade200,
+        ),
       ),
       child: Row(
         children: [
           Icon(
             isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
-            color: Colors.white,
-            size: 28,
+            color: isSuccess ? Colors.green.shade700 : Colors.red.shade700,
+            size: 24,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               _status!,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -420,56 +403,57 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
   }
 
   Widget _buildSelectedFileCard() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.white.withValues(alpha: 0.1),
-                Colors.white.withValues(alpha: 0.05),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          _getFileIcon(_pickedFile!.extension),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _pickedFile!.name,
+                  style: const TextStyle(
+                    color: Color(0xFF1F2937),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_pickedFile!.extension?.toUpperCase() ?? 'UNKNOWN'} • '
+                  '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           ),
-          child: Row(
-            children: [
-              _getFileIcon(_pickedFile!.extension),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _pickedFile!.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${_pickedFile!.extension?.toUpperCase() ?? 'UNKNOWN'} • '
-                      '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.check_circle,
+              color: Colors.green.shade600,
+              size: 20,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -496,18 +480,16 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         color = const Color(0xFFFF9800);
       default:
         iconData = Icons.insert_drive_file_rounded;
-        color = Colors.white70;
+        color = Colors.grey.shade600;
     }
 
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withValues(alpha: 0.2), color.withValues(alpha: 0.1)],
-        ),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(iconData, color: color, size: 32),
+      child: Icon(iconData, color: color, size: 28),
     );
   }
 
@@ -515,15 +497,15 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
-          colors: [Color(0xFFE94560), Color(0xFFC73A52)],
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE94560).withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -531,18 +513,18 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         color: Colors.transparent,
         child: InkWell(
           onTap: _loading ? null : _pickAnyDocument,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 18),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
-                Icon(Icons.folder_open_rounded, color: Colors.white, size: 28),
+                Icon(Icons.folder_open_rounded, color: Colors.white, size: 24),
                 SizedBox(width: 12),
                 Text(
                   'Browse All Documents',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),

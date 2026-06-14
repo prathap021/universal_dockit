@@ -21,78 +21,145 @@ internal object HtmlTemplates {
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>${'$'}{title.esc()}</title>
         <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          
           :root {
+            /* Preserving existing color variables, but tweaking for modern feel */
             --bg:      #FFFFFF;
-            --surface: #F7F7F7;
+            --surface: #F8F9FA;
             --accent:  #E94560;
-            --text:    #111111;
-            --muted:   #555555;
-            --border:  #D9D9D9;
+            --accent-light: #FFECEF;
+            --text:    #1A1A1A;
+            --muted:   #6C757D;
+            --border:  #EAEAEA;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
           }
+          
+          @media (prefers-color-scheme: dark) {
+            :root {
+              --bg:      #121212;
+              --surface: #1E1E1E;
+              --text:    #F5F5F5;
+              --muted:   #A0A0A0;
+              --border:  #2C2C2C;
+              --accent-light: rgba(233, 69, 96, 0.15);
+              --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
+              --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+            }
+          }
+
           * { box-sizing: border-box; margin: 0; padding: 0; }
+          
           body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             font-size: 15px;
             line-height: 1.7;
-            padding: 16px;
+            padding: 24px 16px;
+            max-width: 800px;
+            margin: 0 auto;
+            transition: background 0.3s ease, color 0.3s ease;
           }
+          
+          /* Typography */
           h1, h2, h3, h4 {
             color: var(--accent);
-            margin: 16px 0 8px;
+            margin: 24px 0 12px;
             line-height: 1.3;
+            font-weight: 700;
+            letter-spacing: -0.02em;
           }
-          h1 { font-size: 1.6em; }
-          h2 { font-size: 1.3em; }
-          h3 { font-size: 1.1em; }
-          h4 { font-size: 1.0em; }
-          p  { margin: 6px 0; }
-          .table-wrapper { overflow-x: auto; margin: 12px 0; }
+          h1 { font-size: 1.8em; }
+          h2 { font-size: 1.4em; }
+          h3 { font-size: 1.2em; }
+          h4 { font-size: 1.1em; }
+          p  { margin: 8px 0 16px; color: var(--text); }
+          
+          /* Tables */
+          .table-wrapper { 
+            overflow-x: auto; 
+            margin: 20px 0; 
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            background: var(--surface);
+          }
           table {
             width: 100%;
-            border-collapse: collapse;
-            background: var(--surface);
-            border-radius: 8px;
-            overflow: hidden;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: transparent;
           }
           th {
             background: var(--accent);
             color: white;
             font-weight: 600;
-            padding: 10px 12px;
+            padding: 14px 16px;
             text-align: left;
-            font-size: 13px;
+            font-size: 14px;
             white-space: nowrap;
+            letter-spacing: 0.02em;
           }
+          th:first-child { border-top-left-radius: 12px; }
+          th:last-child { border-top-right-radius: 12px; }
           td {
-            padding: 8px 12px;
+            padding: 12px 16px;
             border-bottom: 1px solid var(--border);
-            font-size: 13px;
+            font-size: 14px;
+            color: var(--text);
+            transition: background 0.2s ease;
           }
           tr:last-child td { border-bottom: none; }
-          tr:nth-child(even) td { background: rgba(255,255,255,.03); }
+          tr:hover td { background: var(--accent-light); }
+          
+          /* Presentation / Spreadsheets */
           .sheet-title {
-            margin-top: 24px;
-            padding: 8px 12px;
+            margin-top: 32px;
+            padding: 12px 16px;
             background: var(--surface);
-            border-left: 4px solid var(--accent);
-            border-radius: 4px;
+            border-left: 5px solid var(--accent);
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            display: inline-block;
           }
           .slide-divider {
             text-align: center;
-            padding: 12px;
-            margin: 20px 0 8px;
+            padding: 14px;
+            margin: 32px 0 16px;
             background: var(--surface);
             color: var(--accent);
-            font-weight: bold;
-            border-radius: 8px;
+            font-weight: 700;
+            font-size: 1.1em;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
           }
-          .error { color: #FF5252; font-style: italic; }
-          strong, b { color: #FAFAFA; }
+          
+          .slide-content {
+            background: var(--surface);
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+          }
+          
+          /* Inline Elements */
+          .error { 
+            color: #FF4757; 
+            font-style: italic; 
+            background: rgba(255, 71, 87, 0.1); 
+            padding: 12px; 
+            border-radius: 8px; 
+            display: inline-block;
+          }
+          strong, b { font-weight: 600; color: var(--text); }
           em, i     { color: var(--muted); }
           del       { text-decoration: line-through; color: var(--muted); }
-          u         { text-decoration: underline; }
+          u         { text-decoration: underline; text-underline-offset: 4px; }
         </style>
         </head>
         <body>
