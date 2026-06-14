@@ -32,16 +32,16 @@ internal class PptxDocumentRenderer : DocumentRenderer {
             val document = PresentationMLPackage.load(File(filePath)) as PresentationMLPackage
             val slideParts = document.mainPresentationPart.slideParts
             slideParts?.forEachIndexed { index, slidePart ->
-                append("<div class='slide-divider'>Slide \${index + 1}</div>")
+                append("<div class='slide-divider'>Slide ${index + 1}</div>")
                 val text = TextUtils.getText(slidePart.jaxbElement)
                 text.lineSequence().forEach { line ->
                     if (line.isNotBlank()) {
-                        append("<p>\${line.esc()}</p>\n")
+                        append("<p>${line.esc()}</p>\n")
                     }
                 }
             }
         }.onFailure { error ->
-            append("<p>Unable to read the PPTX file: \${error.message ?: "unknown error"}</p>")
+            append("<p>Unable to read the PPTX file: ${error.message ?: "unknown error"}</p>")
         }
         append(HtmlTemplates.footer())
     }
