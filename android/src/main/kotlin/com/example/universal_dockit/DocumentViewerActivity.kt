@@ -18,19 +18,16 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.example.universal_dockit.renderers.CsvDocumentRenderer
-import com.example.universal_dockit.renderers.DocDocumentRenderer
 import com.example.universal_dockit.renderers.DocumentRenderer
-import com.example.universal_dockit.renderers.DocxDocumentRenderer
+import com.example.universal_dockit.renderers.ExcelDocumentRenderer
 import com.example.universal_dockit.renderers.OdpDocumentRenderer
 import com.example.universal_dockit.renderers.OdsDocumentRenderer
 import com.example.universal_dockit.renderers.OdtDocumentRenderer
 import com.example.universal_dockit.renderers.PdfDocumentRenderer
-import com.example.universal_dockit.renderers.PptDocumentRenderer
-import com.example.universal_dockit.renderers.PptxDocumentRenderer
+import com.example.universal_dockit.renderers.PowerPointDocumentRenderer
 import com.example.universal_dockit.renderers.RtfDocumentRenderer
 import com.example.universal_dockit.renderers.TxtDocumentRenderer
-import com.example.universal_dockit.renderers.XlsDocumentRenderer
-import com.example.universal_dockit.renderers.XlsxDocumentRenderer
+import com.example.universal_dockit.renderers.WordDocumentRenderer
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import kotlinx.coroutines.CoroutineScope
@@ -49,9 +46,9 @@ import java.io.File
  * │ docType    │ Renderer                                │
  * ├────────────┼─────────────────────────────────────────┤
  * │ pdf        │ PdfDocumentRenderer (PdfiumAndroid)     │
- * │ doc, docx  │ DocDocumentRenderer / DocxDocumentRenderer (POI → HTML) │
- * │ xls, xlsx  │ XlsDocumentRenderer / XlsxDocumentRenderer (POI → HTML) │
- * │ ppt, pptx  │ PptDocumentRenderer / PptxDocumentRenderer (POI text → HTML) │
+ * │ doc, docx  │ WordDocumentRenderer (POI → HTML)               │
+ * │ xls, xlsx  │ ExcelDocumentRenderer (POI → HTML)              │
+ * │ ppt, pptx  │ PowerPointDocumentRenderer (POI text → HTML)    │
  * │ txt        │ TxtDocumentRenderer (TextView, monospace)│
  * │ csv        │ CsvDocumentRenderer (RFC4180 → HTML)    │
  * │ rtf        │ RtfDocumentRenderer (Html.fromHtml)     │
@@ -104,12 +101,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     private fun dispatch(filePath: String, docType: String) {
         val renderer: DocumentRenderer = when (docType.lowercase()) {
             "pdf" -> PdfDocumentRenderer()
-            "docx" -> DocxDocumentRenderer()
-            "doc" -> DocDocumentRenderer()
-            "xlsx" -> XlsxDocumentRenderer()
-            "xls" -> XlsDocumentRenderer()
-            "pptx" -> PptxDocumentRenderer()
-            "ppt" -> PptDocumentRenderer()
+            "docx", "doc" -> WordDocumentRenderer()
+            "xlsx", "xls" -> ExcelDocumentRenderer()
+            "pptx", "ppt" -> PowerPointDocumentRenderer()
             "txt" -> TxtDocumentRenderer()
             "csv" -> CsvDocumentRenderer()
             "rtf" -> RtfDocumentRenderer()
