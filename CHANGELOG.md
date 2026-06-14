@@ -1,9 +1,6 @@
-## 1.0.2
-
-* Replaced Apache POI with `all-documents-reader` SDK on Android for parsing Office documents (Word, Excel, PowerPoint) to resolve dependency conflicts and improve reliability.
-
 ## 1.0.1
 
+* Replaced Apache POI with `all-documents-reader` SDK on Android for parsing Office documents (Word, Excel, PowerPoint) to resolve dependency conflicts and improve reliability.
 * General bug fixes and stability improvements.
 
 ## 1.0.0
