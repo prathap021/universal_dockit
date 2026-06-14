@@ -53,7 +53,6 @@ android {
 
     packaging {
         resources {
-            // Apache POI + PdfiumAndroid duplicate entries
             excludes += setOf(
                 "META-INF/NOTICE",
                 "META-INF/NOTICE.md",
@@ -62,9 +61,9 @@ android {
                 "META-INF/DEPENDENCIES",
                 "META-INF/*.kotlin_module",
                 "META-INF/versions/**",
+                "META-INF/INDEX.LIST",
             )
             pickFirsts += setOf(
-                "META-INF/services/org.apache.poi.ss.usermodel.WorkbookProvider",
                 "META-INF/services/javax.xml.stream.XMLInputFactory",
                 "META-INF/services/javax.xml.stream.XMLOutputFactory",
             )
@@ -114,29 +113,15 @@ dependencies {
     implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 
     // -------------------------------------------------------------------------
-    // Apache POI 5.3.0 — open-source Office document parsing
-    // https://poi.apache.org/  (Apache 2.0)
-    //  poi       : legacy DOC / XLS / PPT
-    //  poi-ooxml : DOCX / XLSX / PPTX (OOXML/ZIP-based formats)
-    // -------------------------------------------------------------------------
-    implementation("org.apache.poi:poi-ooxml:5.3.0") {
-        exclude(group = "xml-apis", module = "xml-apis")
-        exclude(group = "stax", module = "stax-api")
+    // All Documents Reader
+    // https://github.com/ahmadullahpk/all-documents-reader
+    implementation("com.github.ahmadullahpk:all-documents-reader:1.0.7") {
+        exclude(group = "com.github.barteksc", module = "android-pdf-viewer")
     }
-    implementation("org.apache.poi:poi:5.3.0")
-    implementation("org.apache.poi:poi-scratchpad:5.3.0")
-    implementation("org.apache.xmlbeans:xmlbeans:5.3.0")
-
-    // We removed docx4j completely and reverted back to using Apache POI for all Office formats.
 
     // -------------------------------------------------------------------------
     // OpenDocument (.odt/.ods/.odp) is parsed in-house via ZIP + XmlPullParser
-    // (see OdfContentParser). We deliberately avoid:
-    //   • org.odftoolkit:odfdom-java  — depends on org.w3c.dom.events.* /
-    //                                   .traversal.* not present on Android
-    //   • Apache POI slide rendering  — relies on java.awt.Graphics2D
-    //   • io.github.nullpops:android-awt — only provides empty AWT stubs
-    // PPT/PPTX text extraction uses poi-scratchpad / poi-ooxml directly.
+    // (see OdfContentParser).
     // -------------------------------------------------------------------------
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")

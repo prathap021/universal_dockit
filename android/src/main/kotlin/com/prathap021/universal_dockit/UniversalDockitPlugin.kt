@@ -65,22 +65,33 @@ class UniversalDockitPlugin :
                     return
                 }
 
-                val currentActivity = activity
-                if (currentActivity == null) {
-                    result.error("NO_ACTIVITY", "No activity available", null)
-                    return
-                }
-
                 try {
-                    val intent = Intent(currentActivity, DocumentViewerActivity::class.java).apply {
-                        putExtra(DocumentViewerActivity.EXTRA_FILE_PATH, resolvedPath)
-                        putExtra(DocumentViewerActivity.EXTRA_DOC_TYPE, docType)
-                        if (features != null) {
-                            putExtra("features", HashMap(features))
+                    val isOfficeDoc = docType.lowercase() in setOf("doc", "docx", "xls", "xlsx", "ppt", "pptx")
+                    val currentContext = activity ?: context
+                    
+                    if (isOfficeDoc) {
+                        val intent = Intent(currentContext, com.ahmadullahpk.alldocumentreader.activity.All_Document_Reader_Activity::class.java).apply {
+                            putExtra("path", resolvedPath)
+                            putExtra("fromAppActivity", true)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
+                        currentContext.startActivity(intent)
+                        result.success(true)
+                    } else {
+                        if (activity == null) {
+                            result.error("NO_ACTIVITY", "No activity available", null)
+                            return
+                        }
+                        val intent = Intent(activity, DocumentViewerActivity::class.java).apply {
+                            putExtra(DocumentViewerActivity.EXTRA_FILE_PATH, resolvedPath)
+                            putExtra(DocumentViewerActivity.EXTRA_DOC_TYPE, docType)
+                            if (features != null) {
+                                putExtra("features", HashMap(features))
+                            }
+                        }
+                        activity!!.startActivity(intent)
+                        result.success(true)
                     }
-                    currentActivity.startActivity(intent)
-                    result.success(true)
                 } catch (e: Exception) {
                     result.error("OPEN_ERROR", "Failed to open document: ${e.message}", null)
                 }

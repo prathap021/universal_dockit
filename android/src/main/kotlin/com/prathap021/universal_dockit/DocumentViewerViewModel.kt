@@ -12,15 +12,16 @@ class DocumentViewerViewModel : ViewModel() {
     internal fun renderDocument(filePath: String, docType: String, callbacks: RenderCallbacks) {
         val renderer: DocumentRenderer = when (docType.lowercase()) {
             "pdf" -> PdfDocumentRenderer()
-            "docx", "doc" -> WordDocumentRenderer()
-            "xlsx", "xls" -> ExcelDocumentRenderer()
-            "pptx", "ppt" -> PowerPointDocumentRenderer()
             "txt" -> TxtDocumentRenderer()
             "csv" -> CsvDocumentRenderer()
             "rtf" -> RtfDocumentRenderer()
             "odt" -> OdtDocumentRenderer()
             "ods" -> OdsDocumentRenderer()
             "odp" -> OdpDocumentRenderer()
+            "docx", "doc", "xlsx", "xls", "pptx", "ppt" -> {
+                callbacks.showError("Office documents should be opened via All_Document_Reader_Activity")
+                return
+            }
             else -> {
                 callbacks.showError("Unsupported document type: $docType")
                 return

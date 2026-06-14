@@ -32,9 +32,9 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
-| **Word (doc, docx)** | `.doc`, `.docx` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
-| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | **Apache POI** → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
-| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | [All Documents Reader SDK](https://github.com/ahmadullahpk/all-documents-reader) | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [All Documents Reader SDK](https://github.com/ahmadullahpk/all-documents-reader) | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [All Documents Reader SDK](https://github.com/ahmadullahpk/all-documents-reader) | **QuickLook** (Built-in) |
 | **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
 | **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
@@ -60,7 +60,7 @@ dependencies:
 ### 🤖 Android Setup
 
 1. **Minimum SDK**: Ensure your `minSdkVersion` is at least **24** in `android/app/build.gradle`.
-2. **MultiDex**: Apache POI is a large library. Ensure `multiDexEnabled true` is set in your app's `build.gradle` (usually enabled by default on modern Flutter versions).
+2. **JitPack Repository**: Ensure that JitPack is added to your project's `settings.gradle` or root `build.gradle` because the document reader SDK is hosted there.
 
 Because the plugin handles the heavy lifting with its own `build.gradle.kts`, you don't need to add any specific repository exclusions manually in your app module.
 
@@ -144,7 +144,7 @@ await _universalDockitPlugin.openDocument(
 
 To keep the codebase maintainable and performant, the native code is split using the Strategy Pattern:
 
-* **Android**: `DocumentViewerActivity` acts as a host and dispatches rendering to specific consolidated implementations of `DocumentRenderer` (e.g., `WordDocumentRenderer`, `ExcelDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface.
+* **Android**: `UniversalDockitPlugin` handles dispatching. Office documents (Word, Excel, PPT) are routed to the specialized `All_Document_Reader_Activity` from the SDK. Other formats use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific consolidated implementations of `DocumentRenderer` (e.g., `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface.
 * **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `EpubViewerViewController`).
 
 ---
@@ -183,6 +183,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 *Open-source libraries used internally:*
 * *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
-* *[Apache POI](https://poi.apache.org/) (Apache 2.0)*
+* *[All Documents Reader](https://github.com/ahmadullahpk/all-documents-reader)*
 * *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
 * *[ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)*
