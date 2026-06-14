@@ -20,6 +20,7 @@ internal object SlideShapeText {
             when (shape) {
                 is TableShape<*, *> -> appendTable(shape, sb)
                 is TextShape<*, *> -> appendTextShape(shape, sb)
+                is org.apache.poi.sl.usermodel.PictureShape<*, *> -> appendPictureShape(shape, sb)
                 is GroupShape<*, *> -> {
                     @Suppress("UNCHECKED_CAST")
                     walk(shape.shapes as Iterable<Shape<*, *>>, sb)
@@ -55,5 +56,16 @@ internal object SlideShapeText {
             sb.append("</tr>")
         }
         sb.append("</table></div>")
+    }
+
+    private fun appendPictureShape(shape: org.apache.poi.sl.usermodel.PictureShape<*, *>, sb: StringBuilder) {
+        val pictureData = try { shape.pictureData } catch (_: Exception) { null } ?: return
+        val data = pictureData.data ?: return
+        val mimeType = pictureData.contentType ?: "image/png"
+        
+        val base64 = android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP)
+        sb.append("<div style='margin: 16px 0; text-align: center;'>")
+        sb.append("<img src='data:$mimeType;base64,$base64' style='max-width: 100%; height: auto; border-radius: 4px;' />")
+        sb.append("</div>")
     }
 }
