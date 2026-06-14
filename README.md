@@ -43,8 +43,8 @@ The plugin intelligently routes each file type to the most appropriate native re
 ## 🛠 Setup & Installation
 
 **Requirements:**
-* **Flutter SDK**: `>=3.3.0`
-* **Dart SDK**: `^3.12.1`
+* **Flutter SDK**: `>=3.10.0`
+* **Dart SDK**: `>=3.0.0 <4.0.0`
 
 Add `universal_dockit` to your `pubspec.yaml`:
 
