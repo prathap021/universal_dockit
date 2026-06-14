@@ -1,40 +1,28 @@
 package com.example.universal_dockit.renderers
 
 import com.example.universal_dockit.HtmlTemplates
-import com.example.universal_dockit.OdfDomExtractor
+import com.example.universal_dockit.OdfContentParser
 import com.example.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.odftoolkit.odfdom.doc.OdfPresentationDocument
 
 /**
  * OdpDocumentRenderer — renders ODP (OpenDocument Presentation) files.
  *
- * Library : org.apache.odftoolkit:odfdom-java:0.10.0 (Apache 2.0)
- *
- * Rendering strategy:
- *  - Opens the file with [OdfPresentationDocument]
- *  - Traverses content DOM via [OdfDomExtractor]
- *  - draw:page elements → slide-divider banners (numbered)
- *  - Text frames and paragraphs inside each slide are preserved
- *  - Delivers HTML to [RenderCallbacks.showWebContent]
+ * Uses [OdfContentParser]; each `draw:page` becomes a "Slide N" divider in the
+ * resulting HTML, with text-frame contents rendered inline as a text-only
+ * preview (no graphics rasterisation — avoids AWT).
  */
 internal class OdpDocumentRenderer : DocumentRenderer {
 
     override suspend fun render(filePath: String, callbacks: RenderCallbacks) {
-        val html = withContext(Dispatchers.IO) { buildHtml(filePath) }
-        callbacks.showWebContent(html)
-    }
-
-    private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("OpenDocument Presentation"))
-        try {
-            OdfPresentationDocument.loadDocument(filePath).use { doc ->
-                append(OdfDomExtractor.extractHtml(doc, "odp"))
+        val html = withContext(Dispatchers.IO) {
+            buildString {
+                append(HtmlTemplates.header("OpenDocument Presentation"))
+                append(OdfContentParser.parse(filePath, docKind = "odp"))
+                append(HtmlTemplates.footer())
             }
-        } catch (e: Exception) {
-            append("<p class='error'>ODP render error: ${e.message}</p>")
         }
-        append(HtmlTemplates.footer())
+        callbacks.showWebContent(html)
     }
 }

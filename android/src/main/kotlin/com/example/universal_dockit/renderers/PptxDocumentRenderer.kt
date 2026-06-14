@@ -1,54 +1,44 @@
 package com.example.universal_dockit.renderers
 
-import android.graphics.Bitmap
+import com.example.universal_dockit.HtmlTemplates
 import com.example.universal_dockit.RenderCallbacks
-import com.example.universal_dockit.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.xslf.usermodel.XMLSlideShow
-import java.awt.Color
-import java.awt.image.BufferedImage
 import java.io.FileInputStream
 
 /**
- * PptxDocumentRenderer — renders PPTX files using Apache POI XMLSlideShow.
+ * PptxDocumentRenderer — renders PPTX files as a styled HTML "deck".
  *
  * Library : org.apache.poi:poi-ooxml:5.3.0 (Apache 2.0)
  *
- * Rendering strategy:
+ * Text-only rendering strategy (reliable on Android):
  *  - Opens the slide show with [XMLSlideShow]
- *  - Scales each slide to fill the screen width, preserving aspect ratio
- *  - Draws each slide to an AWT [BufferedImage], then converts to [Bitmap]
- *  - Delivers the list of bitmaps to [RenderCallbacks.showSlides]
- *    which places them in a vertical ScrollView with slide-number labels
+ *  - Emits a "Slide N" divider for each slide
+ *  - Extracts text via [SlideShapeText] (recursively walks text/table/group shapes)
+ *  - Does NOT call `slide.draw()` (which requires AWT Graphics2D)
  */
 internal class PptxDocumentRenderer : DocumentRenderer {
 
     override suspend fun render(filePath: String, callbacks: RenderCallbacks) {
-        val bitmaps = withContext(Dispatchers.IO) { renderSlides(filePath, callbacks) }
-        callbacks.showSlides(bitmaps)
+        val html = withContext(Dispatchers.IO) { buildHtml(filePath) }
+        callbacks.showWebContent(html)
     }
 
-    private fun renderSlides(filePath: String, callbacks: RenderCallbacks): List<Bitmap> {
-        val screenW = callbacks.displayMetrics.widthPixels
-        return FileInputStream(filePath).use { fis ->
-            val show = XMLSlideShow(fis)
-            val pageSize = show.pageSize
-            val scale = screenW.toFloat() / pageSize.width
-            val slideH = (pageSize.height * scale).toInt()
-
-            val result = show.slides.map { slide ->
-                val image = BufferedImage(screenW, slideH, BufferedImage.TYPE_INT_ARGB)
-                val graphics = image.createGraphics()
-                graphics.color = Color.WHITE
-                graphics.fillRect(0, 0, screenW, slideH)
-                graphics.scale(scale.toDouble(), scale.toDouble())
-                slide.draw(graphics)
-                graphics.dispose()
-                image.toBitmap()
+    private fun buildHtml(filePath: String): String = buildString {
+        append(HtmlTemplates.header("PowerPoint Presentation"))
+        FileInputStream(filePath).use { fis ->
+            XMLSlideShow(fis).use { show ->
+                show.slides.forEachIndexed { index, slide ->
+                    append("<div class='slide-divider'>Slide ${index + 1}</div>")
+                    @Suppress("UNCHECKED_CAST")
+                    SlideShapeText.walk(
+                        slide.shapes as Iterable<org.apache.poi.sl.usermodel.Shape<*, *>>,
+                        this@buildString,
+                    )
+                }
             }
-            show.close()
-            result
         }
+        append(HtmlTemplates.footer())
     }
 }

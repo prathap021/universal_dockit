@@ -35,6 +35,10 @@ android {
                 "META-INF/*.kotlin_module",
                 "META-INF/versions/**",
             )
+            pickFirsts += setOf(
+                "META-INF/services/javax.xml.stream.XMLInputFactory",
+                "META-INF/services/javax.xml.stream.XMLOutputFactory",
+            )
         }
     }
 

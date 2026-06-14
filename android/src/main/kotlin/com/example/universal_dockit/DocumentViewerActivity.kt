@@ -1,81 +1,81 @@
 package com.example.universal_dockit
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
-import android.widget.*
+import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
+import com.example.universal_dockit.renderers.CsvDocumentRenderer
+import com.example.universal_dockit.renderers.DocDocumentRenderer
+import com.example.universal_dockit.renderers.DocumentRenderer
+import com.example.universal_dockit.renderers.DocxDocumentRenderer
+import com.example.universal_dockit.renderers.OdpDocumentRenderer
+import com.example.universal_dockit.renderers.OdsDocumentRenderer
+import com.example.universal_dockit.renderers.OdtDocumentRenderer
+import com.example.universal_dockit.renderers.PdfDocumentRenderer
+import com.example.universal_dockit.renderers.PptDocumentRenderer
+import com.example.universal_dockit.renderers.PptxDocumentRenderer
+import com.example.universal_dockit.renderers.RtfDocumentRenderer
+import com.example.universal_dockit.renderers.TxtDocumentRenderer
+import com.example.universal_dockit.renderers.XlsDocumentRenderer
+import com.example.universal_dockit.renderers.XlsxDocumentRenderer
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
-import com.example.universal_dockit.renderers.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * DocumentViewerActivity — hosts all native viewer views and dispatches
- * to the correct [DocumentRenderer] based on the file's docType.
+ * DocumentViewerActivity — single host Activity that swaps between three viewers
+ * (PDFView / WebView / TextView) depending on the document type.
  *
- * This activity owns only the view hierarchy and coroutine scope.
- * All rendering logic lives in the per-format renderer classes under
- * the [com.example.universal_dockit.renderers] package.
- *
- * ┌──────────────┬────────────────────────────────────────┐
- * │  docType     │  Renderer class                        │
- * ├──────────────┼────────────────────────────────────────┤
- * │  pdf         │  PdfDocumentRenderer                   │
- * │  docx        │  DocxDocumentRenderer                  │
- * │  doc         │  DocDocumentRenderer                   │
- * │  xlsx        │  XlsxDocumentRenderer                  │
- * │  xls         │  XlsDocumentRenderer                   │
- * │  pptx        │  PptxDocumentRenderer                  │
- * │  ppt         │  PptDocumentRenderer                   │
- * │  txt         │  TxtDocumentRenderer                   │
- * │  csv         │  CsvDocumentRenderer                   │
- * │  rtf         │  RtfDocumentRenderer                   │
- * │  odt         │  OdtDocumentRenderer                   │
- * │  ods         │  OdsDocumentRenderer                   │
- * │  odp         │  OdpDocumentRenderer                   │
- * └──────────────┴────────────────────────────────────────┘
+ * ┌────────────┬─────────────────────────────────────────┐
+ * │ docType    │ Renderer                                │
+ * ├────────────┼─────────────────────────────────────────┤
+ * │ pdf        │ PdfDocumentRenderer (PdfiumAndroid)     │
+ * │ doc, docx  │ DocDocumentRenderer / DocxDocumentRenderer (POI → HTML) │
+ * │ xls, xlsx  │ XlsDocumentRenderer / XlsxDocumentRenderer (POI → HTML) │
+ * │ ppt, pptx  │ PptDocumentRenderer / PptxDocumentRenderer (POI text → HTML) │
+ * │ txt        │ TxtDocumentRenderer (TextView, monospace)│
+ * │ csv        │ CsvDocumentRenderer (RFC4180 → HTML)    │
+ * │ rtf        │ RtfDocumentRenderer (Html.fromHtml)     │
+ * │ odt/ods/odp│ Odt/Ods/OdpDocumentRenderer (ZIP+XML → HTML) │
+ * └────────────┴─────────────────────────────────────────┘
  */
 class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     companion object {
         const val EXTRA_FILE_PATH = "extra_file_path"
-        const val EXTRA_DOC_TYPE  = "extra_doc_type"
+        const val EXTRA_DOC_TYPE = "extra_doc_type"
     }
 
-    // ── Coroutine scope (cancelled in onDestroy) ───────────────────────────
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    // ── RenderCallbacks contract ───────────────────────────────────────────
     override val context get() = this
     override val displayMetrics get() = resources.displayMetrics
 
-    // ── Views ──────────────────────────────────────────────────────────────
-    private lateinit var progressBar:  ProgressBar
-    private lateinit var errorView:    TextView
-
-    /** PdfiumAndroid PDFView — used exclusively by PdfDocumentRenderer. */
+    private lateinit var progressBar: ProgressBar
+    private lateinit var errorView: TextView
     private lateinit var pdfView: PDFView
-
-    /** WebView — used by DOC/DOCX, XLS/XLSX, CSV, ODT/ODS/ODP renderers. */
     private lateinit var webView: WebView
-
-    /** Scrollable TextView — used by TXT and RTF renderers. */
     private lateinit var textScrollView: ScrollView
-    private lateinit var textView:       TextView
-
-    /** Vertical ScrollView of slide bitmaps — used by PPTX/PPT renderers. */
-    private lateinit var slideScroll:     ScrollView
-    private lateinit var slideContainer:  LinearLayout
-
-    // ── Lifecycle ──────────────────────────────────────────────────────────
+    private lateinit var textView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +86,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         }
         val docType = intent.getStringExtra(EXTRA_DOC_TYPE) ?: run {
             showError("No document type provided."); return
+        }
+        if (!File(filePath).exists()) {
+            showError("File not found:\n$filePath"); return
         }
 
         dispatch(filePath, docType)
@@ -99,43 +102,47 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     // ── Dispatcher ─────────────────────────────────────────────────────────
 
     private fun dispatch(filePath: String, docType: String) {
-        showLoading()
-        val renderer: com.example.universal_dockit.renderers.DocumentRenderer = when (docType.lowercase()) {
-            "pdf"  -> PdfDocumentRenderer()
+        val renderer: DocumentRenderer = when (docType.lowercase()) {
+            "pdf" -> PdfDocumentRenderer()
             "docx" -> DocxDocumentRenderer()
-            "doc"  -> DocDocumentRenderer()
+            "doc" -> DocDocumentRenderer()
             "xlsx" -> XlsxDocumentRenderer()
-            "xls"  -> XlsDocumentRenderer()
+            "xls" -> XlsDocumentRenderer()
             "pptx" -> PptxDocumentRenderer()
-            "ppt"  -> PptDocumentRenderer()
-            "txt"  -> TxtDocumentRenderer()
-            "csv"  -> CsvDocumentRenderer()
-            "rtf"  -> RtfDocumentRenderer()
-            "odt"  -> OdtDocumentRenderer()
-            "ods"  -> OdsDocumentRenderer()
-            "odp"  -> OdpDocumentRenderer()
-            else   -> { showError("Unsupported type: $docType"); return }
+            "ppt" -> PptDocumentRenderer()
+            "txt" -> TxtDocumentRenderer()
+            "csv" -> CsvDocumentRenderer()
+            "rtf" -> RtfDocumentRenderer()
+            "odt" -> OdtDocumentRenderer()
+            "ods" -> OdsDocumentRenderer()
+            "odp" -> OdpDocumentRenderer()
+            else -> {
+                showError("Unsupported document type: $docType"); return
+            }
         }
+
+        showLoading()
         scope.launch {
             try {
                 renderer.render(filePath, this@DocumentViewerActivity)
-            } catch (e: Exception) {
-                showError("Render error:\n${e.message}")
+            } catch (e: Throwable) {
+                showError("Failed to render document\n${e.javaClass.simpleName}: ${e.message ?: ""}")
             }
         }
     }
 
-    // ── RenderCallbacks implementations ────────────────────────────────────
+    // ── RenderCallbacks ────────────────────────────────────────────────────
 
     override suspend fun showWebContent(html: String) = withContext(Dispatchers.Main) {
-        hideAll()
+        // Loader stays visible until WebViewClient.onPageFinished() fires.
+        hideContent()
         webView.isVisible = true
         webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
     }
 
     override suspend fun showText(text: CharSequence, monospace: Boolean) =
         withContext(Dispatchers.Main) {
-            hideAll()
+            hideContent()
             textScrollView.isVisible = true
             if (monospace) {
                 textView.typeface = android.graphics.Typeface.MONOSPACE
@@ -145,10 +152,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                 textView.textSize = 15f
             }
             textView.text = text
+            progressBar.isVisible = false
         }
 
     override suspend fun showPdf(file: File) = withContext(Dispatchers.Main) {
-        hideAll()
+        hideContent()
         pdfView.isVisible = true
         pdfView.fromFile(file)
             .defaultPage(0)
@@ -159,73 +167,51 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             .spacing(8)
             .scrollHandle(DefaultScrollHandle(this@DocumentViewerActivity))
             .nightMode(false)
-            .onError { e -> showError("PDF error: ${e.message}") }
+            .onLoad { _ -> progressBar.isVisible = false }
+            .onError { e ->
+                progressBar.isVisible = false
+                showError("PDF error: ${e.message}")
+            }
             .load()
-    }
-
-    override suspend fun showSlides(bitmaps: List<Bitmap>) = withContext(Dispatchers.Main) {
-        hideAll()
-        slideScroll.isVisible = true
-        bitmaps.forEachIndexed { i, bmp ->
-            slideContainer.addView(ImageView(this@DocumentViewerActivity).apply {
-                layoutParams = LinearLayout.LayoutParams(MATCH, WRAP)
-                    .also { it.setMargins(8, if (i == 0) 8 else 0, 8, 16) }
-                setImageBitmap(bmp)
-                scaleType = ImageView.ScaleType.FIT_XY
-                adjustViewBounds = true
-            })
-        }
     }
 
     override fun showError(message: String) {
         runOnUiThread {
-            hideAll()
+            hideContent()
+            progressBar.isVisible = false
             errorView.isVisible = true
-            errorView.text = "⚠️ $message"
+            errorView.text = "⚠️  $message"
         }
     }
 
     // ── View helpers ───────────────────────────────────────────────────────
 
     private fun showLoading() {
-        progressBar.isVisible  = true
-        webView.isVisible      = false
-        pdfView.isVisible      = false
-        textScrollView.isVisible = false
-        slideScroll.isVisible  = false
-        errorView.isVisible    = false
+        progressBar.isVisible = true
+        hideContent()
     }
 
-    private fun hideAll() {
-        progressBar.isVisible  = false
-        webView.isVisible      = false
-        pdfView.isVisible      = false
+    private fun hideContent() {
+        webView.isVisible = false
+        pdfView.isVisible = false
         textScrollView.isVisible = false
-        slideScroll.isVisible  = false
-        errorView.isVisible    = false
+        errorView.isVisible = false
     }
 
-    // ── Programmatic view construction ─────────────────────────────────────
+    // ── View construction ──────────────────────────────────────────────────
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun buildContentView(): View {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        val root = FrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(MATCH, MATCH)
             setBackgroundColor(BG)
         }
 
-        // Loading spinner
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH, MATCH).apply {
-                gravity = Gravity.CENTER
-            }
-            indeterminateTintList =
-                android.content.res.ColorStateList.valueOf(ACCENT)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(MATCH, MATCH)
         }
-        root.addView(progressBar)
 
-        // Error label
         errorView = TextView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
             setTextColor(Color.parseColor("#B71C1C"))
@@ -234,16 +220,14 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             setPadding(32, 32, 32, 32)
             isVisible = false
         }
-        root.addView(errorView)
+        content.addView(errorView)
 
-        // PdfiumAndroid PDFView
         pdfView = PDFView(this, null).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
             isVisible = false
         }
-        root.addView(pdfView)
+        content.addView(pdfView)
 
-        // WebView (DOC/DOCX, XLS/XLSX, CSV, ODF)
         webView = WebView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
             settings.javaScriptEnabled = false
@@ -251,12 +235,26 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             settings.displayZoomControls = false
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
+            settings.defaultTextEncodingName = "UTF-8"
             setBackgroundColor(Color.WHITE)
             isVisible = false
-        }
-        root.addView(webView)
 
-        // TextView in ScrollView (TXT / RTF)
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    progressBar.isVisible = false
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?,
+                ) {
+                    progressBar.isVisible = false
+                }
+            }
+        }
+        content.addView(webView)
+
         textView = TextView(this).apply {
             setTextColor(Color.parseColor("#111111"))
             setLineSpacing(4f, 1.2f)
@@ -269,27 +267,23 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             isVisible = false
         }
         textScrollView.addView(textView)
-        root.addView(textScrollView)
+        content.addView(textScrollView)
 
-        // Slide ScrollView (PPTX / PPT)
-        slideContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(MATCH, WRAP)
+        root.addView(content)
+
+        // Centered loading overlay (drawn last → on top)
+        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
+            layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER)
+            indeterminateTintList =
+                android.content.res.ColorStateList.valueOf(ACCENT)
         }
-        slideScroll = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
-            setBackgroundColor(Color.WHITE)
-            isVisible = false
-        }
-        slideScroll.addView(slideContainer)
-        root.addView(slideScroll)
+        root.addView(progressBar)
 
         return root
     }
 
-    // ── Constants ──────────────────────────────────────────────────────────
-    private val MATCH   = ViewGroup.LayoutParams.MATCH_PARENT
-    private val WRAP    = ViewGroup.LayoutParams.WRAP_CONTENT
-    private val BG      = Color.WHITE
-    private val ACCENT  = Color.parseColor("#E94560")
+    private val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
+    private val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
+    private val BG = Color.WHITE
+    private val ACCENT = Color.parseColor("#E94560")
 }

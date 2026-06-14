@@ -64,6 +64,7 @@ android {
             pickFirsts += setOf(
                 "META-INF/services/org.apache.poi.ss.usermodel.WorkbookProvider",
                 "META-INF/services/javax.xml.stream.XMLInputFactory",
+                "META-INF/services/javax.xml.stream.XMLOutputFactory",
             )
         }
     }
@@ -125,22 +126,16 @@ dependencies {
     implementation("org.apache.commons:commons-math3:3.6.1")
     implementation("commons-codec:commons-codec:1.18.0")
     implementation("commons-io:commons-io:2.19.0")
-    // Provides java.awt stubs required by Apache POI slide rendering on Android
-    implementation("io.github.nullpops:android-awt:1.0.0")
-
-    // XML DOM implementation required by ODF Toolkit on Android
-    implementation("xerces:xercesImpl:2.12.2")
 
     // -------------------------------------------------------------------------
-    // Apache ODF Toolkit — open-source OpenDocument format support
-    // https://odftoolkit.org/  (Apache 2.0)
-    // Provides OdfTextDocument, OdfSpreadsheetDocument, OdfPresentationDocument
+    // OpenDocument (.odt/.ods/.odp) is parsed in-house via ZIP + XmlPullParser
+    // (see OdfContentParser). We deliberately avoid:
+    //   • org.odftoolkit:odfdom-java  — depends on org.w3c.dom.events.* /
+    //                                   .traversal.* not present on Android
+    //   • Apache POI slide rendering  — relies on java.awt.Graphics2D
+    //   • io.github.nullpops:android-awt — only provides empty AWT stubs
+    // PPT/PPTX text extraction uses poi-scratchpad / poi-ooxml directly.
     // -------------------------------------------------------------------------
-    implementation("org.odftoolkit:odfdom-java:0.10.0") {
-        exclude(group = "io.github.git-commit-id", module = "git-commit-id-maven-plugin")
-        exclude(group = "xml-apis", module = "xml-apis")
-        exclude(group = "javax.json", module = "javax.json-api")
-    }
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
