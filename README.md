@@ -14,11 +14,11 @@ Absolutely **no commercial dependencies**, **no cloud processing**, and **100% o
 
 ## ✨ Features
 
-* **Universal Format Support**: Open 13 different document types including PDF, Word, Excel, PowerPoint, Text, CSV, RTF, and OpenDocument formats.
+* **Universal Format Support**: Open 15 different document types including PDF, Word, Excel, PowerPoint, EPUB, CBZ, Text, CSV, RTF, and OpenDocument formats.
 * **Native Performance**: Documents are rendered natively using optimized libraries like `PdfiumAndroid` on Android and `PDFKit`/`QuickLook` on iOS.
-* **Dark Mode Ready**: Beautiful, cohesive dark-themed UI out-of-the-box for HTML-rendered documents, text, and CSVs.
-* **Smart Rendering**: Formula evaluation in spreadsheets, native zooming and scrolling for PDFs, and column-aligned rendering for CSVs.
-* **Fully Offline**: Everything is parsed and rendered entirely on the device.
+* **Format-Specific Themes**: Beautiful, color-coded native headers (e.g., Blue for Word, Green for Excel, Purple for EPUB) provide a cohesive, premium UI out-of-the-box.
+* **Smart Rendering**: Formula evaluation in spreadsheets, native zooming and scrolling for PDFs, and HTML structural extraction for E-Books and Comic Books.
+* **Fully Offline**: Everything is parsed and rendered entirely on the device without cloud APIs or heavy monolithic frameworks.
 
 ---
 
@@ -28,16 +28,15 @@ The plugin intelligently routes each file type to the most appropriate native re
 
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
-| **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated, pinch-to-zoom) | **PDFKit** (Built-in) |
-| **Word** | `.docx` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
-| **Word (Legacy)** | `.doc` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
-| **Excel** | `.xlsx` | **Apache POI** → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
-| **Excel (Legacy)**| `.xls` | **Apache POI** → HTML Table → WebView | **QuickLook** (Built-in) |
-| **PowerPoint**| `.pptx` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
-| **PowerPoint (Legacy)**| `.ppt` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
+| **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | **Apache POI** → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
+| **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
+| **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
 | **CSV** | `.csv` | RFC-4180 Parser → HTML Table → WebView | Aligned Plain-text Table → `UITextView` |
-| **Rich Text** | `.rtf` | Tag Stripper → `Html.fromHtml` → `TextView` | `NSAttributedString` → `UITextView` |
+| **Rich Text** | `.rtf` | Native HTML Parser → `Html.fromHtml` → `TextView` | `NSAttributedString` → `UITextView` |
 | **OpenDocument**| `.odt`, `.ods`, `.odp`| In-house ZIP/XML Parser → HTML → WebView| **QuickLook** (Built-in) |
 
 ---
@@ -64,9 +63,9 @@ Because the plugin handles the heavy lifting with its own `build.gradle.kts`, yo
 
 ### 🍎 iOS Setup
 
-1. **Minimum iOS Version**: Ensure your iOS deployment target is at least **iOS 13.0** in your `ios/Podfile`:
+1. **Minimum iOS Version**: Ensure your iOS deployment target is at least **iOS 13.4** in your `ios/Podfile`:
    ```ruby
-   platform :ios, '13.0'
+   platform :ios, '13.4'
    ```
 2. **Install Pods**: Run the following from your `ios` directory:
    ```bash
@@ -117,7 +116,7 @@ await _universalDockitPlugin.openDocument(
 );
 ```
 
-Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `txt`, `csv`, `rtf`, `odt`, `ods`, `odp`.
+Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `epub`, `cbz`, `txt`, `csv`, `rtf`, `odt`, `ods`, `odp`.
 
 ---
 
@@ -125,8 +124,8 @@ Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, 
 
 To keep the codebase maintainable and performant, the native code is split using the Strategy Pattern:
 
-* **Android**: `DocumentViewerActivity` acts as a host and dispatches rendering to specific implementations of `DocumentRenderer` (e.g., `PdfDocumentRenderer`, `DocxDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface.
-* **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `CsvViewerViewController`).
+* **Android**: `DocumentViewerActivity` acts as a host and dispatches rendering to specific consolidated implementations of `DocumentRenderer` (e.g., `WordDocumentRenderer`, `ExcelDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface.
+* **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `EpubViewerViewController`).
 
 ---
 
@@ -137,5 +136,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 *Open-source libraries used internally:*
 * *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
 * *[Apache POI](https://poi.apache.org/) (Apache 2.0)*
-* *[docx4j](https://github.com/plutext/docx4j) (Apache 2.0)*
 * *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
+* *[ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)*
