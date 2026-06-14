@@ -38,7 +38,7 @@ final class CsvViewerViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = UIColor(hex: 0x0F3460)
+        view.backgroundColor = .white
         title = fileURL.lastPathComponent
         applyNavBarTheme()
 
@@ -52,8 +52,8 @@ final class CsvViewerViewController: UIViewController {
 
         textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.backgroundColor = UIColor(hex: 0x0F3460)
-        textView.textColor       = UIColor(hex: 0xE0E0E0)
+        textView.backgroundColor = .white
+        textView.textColor       = .darkText
         textView.font            = UIFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         textView.isEditable      = false
         textView.isSelectable    = true

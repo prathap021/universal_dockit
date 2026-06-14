@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
@@ -59,7 +58,6 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     override val displayMetrics get() = resources.displayMetrics
 
     // ── Views ──────────────────────────────────────────────────────────────
-    private lateinit var toolbar:      Toolbar
     private lateinit var progressBar:  ProgressBar
     private lateinit var errorView:    TextView
 
@@ -90,7 +88,6 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             showError("No document type provided."); return
         }
 
-        toolbar.title = File(filePath).name
         dispatch(filePath, docType)
     }
 
@@ -170,15 +167,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         hideAll()
         slideScroll.isVisible = true
         bitmaps.forEachIndexed { i, bmp ->
-            slideContainer.addView(TextView(this@DocumentViewerActivity).apply {
-                text = "Slide ${i + 1}"
-                setTextColor(ACCENT)
-                textSize = 13f
-                setPadding(16, 16, 16, 4)
-            })
             slideContainer.addView(ImageView(this@DocumentViewerActivity).apply {
                 layoutParams = LinearLayout.LayoutParams(MATCH, WRAP)
-                    .also { it.setMargins(8, 0, 8, 16) }
+                    .also { it.setMargins(8, if (i == 0) 8 else 0, 8, 16) }
                 setImageBitmap(bmp)
                 scaleType = ImageView.ScaleType.FIT_XY
                 adjustViewBounds = true
@@ -224,35 +215,20 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             setBackgroundColor(BG)
         }
 
-        // Toolbar
-        toolbar = Toolbar(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                MATCH,
-                resources.getDimensionPixelSize(
-                    androidx.appcompat.R.dimen.abc_action_bar_default_height_material,
-                ),
-            )
-            setBackgroundColor(SURFACE)
-            setTitleTextColor(Color.WHITE)
-            navigationIcon = getDrawable(android.R.drawable.ic_menu_close_clear_cancel)
-            setNavigationOnClickListener { finish() }
-        }
-        setSupportActionBar(toolbar)
-        root.addView(toolbar)
-
         // Loading spinner
         progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
+            layoutParams = LinearLayout.LayoutParams(MATCH, MATCH).apply {
+                gravity = Gravity.CENTER
+            }
             indeterminateTintList =
                 android.content.res.ColorStateList.valueOf(ACCENT)
-            gravity = Gravity.CENTER
         }
         root.addView(progressBar)
 
         // Error label
         errorView = TextView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#B71C1C"))
             textSize = 16f
             gravity = Gravity.CENTER
             setPadding(32, 32, 32, 32)
@@ -275,21 +251,21 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             settings.displayZoomControls = false
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
-            setBackgroundColor(BG)
+            setBackgroundColor(Color.WHITE)
             isVisible = false
         }
         root.addView(webView)
 
         // TextView in ScrollView (TXT / RTF)
         textView = TextView(this).apply {
-            setTextColor(Color.parseColor("#E0E0E0"))
+            setTextColor(Color.parseColor("#111111"))
             setLineSpacing(4f, 1.2f)
             setPadding(20, 20, 20, 20)
             setTextIsSelectable(true)
         }
         textScrollView = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
-            setBackgroundColor(BG)
+            setBackgroundColor(Color.WHITE)
             isVisible = false
         }
         textScrollView.addView(textView)
@@ -302,7 +278,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         }
         slideScroll = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
-            setBackgroundColor(Color.parseColor("#1A1A2E"))
+            setBackgroundColor(Color.WHITE)
             isVisible = false
         }
         slideScroll.addView(slideContainer)
@@ -314,7 +290,6 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     // ── Constants ──────────────────────────────────────────────────────────
     private val MATCH   = ViewGroup.LayoutParams.MATCH_PARENT
     private val WRAP    = ViewGroup.LayoutParams.WRAP_CONTENT
-    private val BG      = Color.parseColor("#0F3460")
-    private val SURFACE = Color.parseColor("#16213E")
+    private val BG      = Color.WHITE
     private val ACCENT  = Color.parseColor("#E94560")
 }

@@ -41,7 +41,7 @@ final class XLSXViewerViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = UIColor(red: 0.059, green: 0.204, blue: 0.376, alpha: 1)
+        view.backgroundColor = .white
 
         title = fileURL.lastPathComponent
         navigationController?.navigationBar.barTintColor = UIColor(red: 0.086, green: 0.129, blue: 0.243, alpha: 1)
@@ -60,7 +60,7 @@ final class XLSXViewerViewController: UIViewController {
         let config = WKWebViewConfiguration()
         webView = WKWebView(frame: .zero, configuration: config)
         webView.translatesAutoresizingMaskIntoConstraints = false
-        webView.backgroundColor = UIColor(red: 0.059, green: 0.204, blue: 0.376, alpha: 1)
+        webView.backgroundColor = .white
         webView.scrollView.backgroundColor = .clear
         webView.isOpaque = false
         view.addSubview(webView)
@@ -199,8 +199,8 @@ final class XLSXViewerViewController: UIViewController {
         <title>\(title)</title>
         <style>
           :root {
-            --bg: #0F3460; --surface: #16213E; --accent: #E94560;
-            --text: #E0E0E0; --border: #1A1A2E;
+            --bg: #FFFFFF; --surface: #F7F7F7; --accent: #E94560;
+            --text: #111111; --border: #D9D9D9;
           }
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body {

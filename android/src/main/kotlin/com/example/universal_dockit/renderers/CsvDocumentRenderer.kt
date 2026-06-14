@@ -6,7 +6,9 @@ import com.example.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
-import java.io.FileReader
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 
 /**
  * CsvDocumentRenderer — renders CSV files as an HTML table in a WebView.
@@ -31,7 +33,9 @@ internal class CsvDocumentRenderer : DocumentRenderer {
         append(HtmlTemplates.header("CSV"))
         append("<div class='table-wrapper'><table>")
         var firstRow = true
-        BufferedReader(FileReader(filePath)).use { br ->
+        BufferedReader(
+            InputStreamReader(FileInputStream(filePath), StandardCharsets.UTF_8),
+        ).use { br ->
             var line: String?
             while (br.readLine().also { line = it } != null) {
                 val cells = parseCsvLine(line!!)

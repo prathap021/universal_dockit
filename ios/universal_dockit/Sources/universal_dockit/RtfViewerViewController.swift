@@ -41,7 +41,7 @@ final class RtfViewerViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = UIColor(hex: 0x0F3460)
+        view.backgroundColor = .white
         title = fileURL.lastPathComponent
         applyNavBarTheme()
 
@@ -55,8 +55,8 @@ final class RtfViewerViewController: UIViewController {
 
         textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.backgroundColor = UIColor(hex: 0x0F3460)
-        textView.textColor       = UIColor(hex: 0xE0E0E0)
+        textView.backgroundColor = .white
+        textView.textColor       = .darkText
         textView.font            = UIFont.systemFont(ofSize: 15)
         textView.isEditable      = false
         textView.isSelectable    = true
@@ -122,7 +122,7 @@ final class RtfViewerViewController: UIViewController {
         return NSAttributedString(
             string: plain,
             attributes: [
-                .foregroundColor: UIColor(hex: 0xE0E0E0),
+                .foregroundColor: UIColor.darkText,
                 .font: UIFont.systemFont(ofSize: 15),
             ]
         )
@@ -137,17 +137,16 @@ final class RtfViewerViewController: UIViewController {
         let fullRange = NSRange(location: 0, length: mutable.length)
 
         mutable.enumerateAttribute(.foregroundColor, in: fullRange) { value, range, _ in
-            let lightColor = UIColor(hex: 0xE0E0E0)
+            let darkColor = UIColor.darkText
             if let color = value as? UIColor {
-                // Measure brightness; replace dark colours with our light colour
                 var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
                 color.getRed(&r, green: &g, blue: &b, alpha: &a)
                 let brightness = (r * 299 + g * 587 + b * 114) / 1000
                 if brightness < 0.5 {
-                    mutable.addAttribute(.foregroundColor, value: lightColor, range: range)
+                    mutable.addAttribute(.foregroundColor, value: darkColor, range: range)
                 }
             } else {
-                mutable.addAttribute(.foregroundColor, value: lightColor, range: range)
+                mutable.addAttribute(.foregroundColor, value: darkColor, range: range)
             }
         }
         return mutable

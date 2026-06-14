@@ -38,6 +38,11 @@ class UniversalDockitPlugin :
                     return
                 }
 
+                if (!java.io.File(filePath).exists()) {
+                    result.error("FILE_NOT_FOUND", "File not found: $filePath", null)
+                    return
+                }
+
                 val currentActivity = activity
                 if (currentActivity == null) {
                     result.error("NO_ACTIVITY", "No activity available", null)

@@ -38,7 +38,7 @@ final class PDFViewerViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = UIColor(red: 0.102, green: 0.102, blue: 0.18, alpha: 1)
+        view.backgroundColor = .white
 
         // Navigation bar
         title = fileURL.lastPathComponent
@@ -60,7 +60,7 @@ final class PDFViewerViewController: UIViewController {
         pdfView.autoScales = true
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
-        pdfView.backgroundColor = UIColor(red: 0.059, green: 0.204, blue: 0.376, alpha: 1)
+        pdfView.backgroundColor = .white
         pdfView.pageShadowsEnabled = true
         view.addSubview(pdfView)
 
@@ -69,14 +69,14 @@ final class PDFViewerViewController: UIViewController {
         thumbnailView.translatesAutoresizingMaskIntoConstraints = false
         thumbnailView.pdfView = pdfView
         thumbnailView.thumbnailSize = CGSize(width: 50, height: 70)
-        thumbnailView.backgroundColor = UIColor(red: 0.086, green: 0.129, blue: 0.243, alpha: 1)
+        thumbnailView.backgroundColor = .white
         thumbnailView.layoutMode = .horizontal
         view.addSubview(thumbnailView)
 
         // Page counter label
         pageLabel = UILabel()
         pageLabel.translatesAutoresizingMaskIntoConstraints = false
-        pageLabel.textColor = UIColor(white: 1.0, alpha: 0.7)
+        pageLabel.textColor = .darkText
         pageLabel.font = UIFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)
         pageLabel.textAlignment = .center
         view.addSubview(pageLabel)

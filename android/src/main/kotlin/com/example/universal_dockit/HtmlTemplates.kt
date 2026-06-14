@@ -22,12 +22,12 @@ internal object HtmlTemplates {
         <title>${'$'}{title.esc()}</title>
         <style>
           :root {
-            --bg:      #0F3460;
-            --surface: #16213E;
+            --bg:      #FFFFFF;
+            --surface: #F7F7F7;
             --accent:  #E94560;
-            --text:    #E0E0E0;
-            --muted:   #9E9E9E;
-            --border:  #1A1A2E;
+            --text:    #111111;
+            --muted:   #555555;
+            --border:  #D9D9D9;
           }
           * { box-sizing: border-box; margin: 0; padding: 0; }
           body {

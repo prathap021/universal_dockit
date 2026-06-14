@@ -47,7 +47,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
         multiDexEnabled = true
     }
 
@@ -103,7 +103,8 @@ dependencies {
     // https://github.com/barteksc/AndroidPdfViewer  (Apache 2.0)
     // PDFView widget backed by PdfiumAndroid native renderer
     // -------------------------------------------------------------------------
-    implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
+    // barteksc artifact is unavailable on JitPack; mhiew fork is published on Maven Central
+    implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 
     // -------------------------------------------------------------------------
     // Apache POI 5.3.0 — open-source Office document parsing
@@ -116,6 +117,7 @@ dependencies {
         exclude(group = "stax", module = "stax-api")
     }
     implementation("org.apache.poi:poi:5.3.0")
+    implementation("org.apache.poi:poi-scratchpad:5.3.0")
     implementation("org.apache.xmlbeans:xmlbeans:5.3.0")
     implementation("com.zaxxer:SparseBitSet:1.3")
     implementation("org.apache.commons:commons-collections4:4.4")
@@ -123,14 +125,21 @@ dependencies {
     implementation("org.apache.commons:commons-math3:3.6.1")
     implementation("commons-codec:commons-codec:1.18.0")
     implementation("commons-io:commons-io:2.19.0")
+    // Provides java.awt stubs required by Apache POI slide rendering on Android
+    implementation("io.github.nullpops:android-awt:1.0.0")
+
+    // XML DOM implementation required by ODF Toolkit on Android
+    implementation("xerces:xercesImpl:2.12.2")
 
     // -------------------------------------------------------------------------
     // Apache ODF Toolkit — open-source OpenDocument format support
     // https://odftoolkit.org/  (Apache 2.0)
     // Provides OdfTextDocument, OdfSpreadsheetDocument, OdfPresentationDocument
     // -------------------------------------------------------------------------
-    implementation("org.apache.odftoolkit:odfdom-java:0.10.0") {
+    implementation("org.odftoolkit:odfdom-java:0.10.0") {
+        exclude(group = "io.github.git-commit-id", module = "git-commit-id-maven-plugin")
         exclude(group = "xml-apis", module = "xml-apis")
+        exclude(group = "javax.json", module = "javax.json-api")
     }
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")

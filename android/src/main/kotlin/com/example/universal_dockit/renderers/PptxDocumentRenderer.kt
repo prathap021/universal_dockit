@@ -1,12 +1,13 @@
 package com.example.universal_dockit.renderers
 
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
 import com.example.universal_dockit.RenderCallbacks
+import com.example.universal_dockit.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.xslf.usermodel.XMLSlideShow
+import java.awt.Color
+import java.awt.image.BufferedImage
 import java.io.FileInputStream
 
 /**
@@ -17,7 +18,7 @@ import java.io.FileInputStream
  * Rendering strategy:
  *  - Opens the slide show with [XMLSlideShow]
  *  - Scales each slide to fill the screen width, preserving aspect ratio
- *  - Draws each slide to a [Canvas]-backed [Bitmap] (white background)
+ *  - Draws each slide to an AWT [BufferedImage], then converts to [Bitmap]
  *  - Delivers the list of bitmaps to [RenderCallbacks.showSlides]
  *    which places them in a vertical ScrollView with slide-number labels
  */
@@ -31,19 +32,20 @@ internal class PptxDocumentRenderer : DocumentRenderer {
     private fun renderSlides(filePath: String, callbacks: RenderCallbacks): List<Bitmap> {
         val screenW = callbacks.displayMetrics.widthPixels
         return FileInputStream(filePath).use { fis ->
-            val show    = XMLSlideShow(fis)
+            val show = XMLSlideShow(fis)
             val pageSize = show.pageSize
-            val scale   = screenW.toFloat() / pageSize.width
-            val slideH  = (pageSize.height * scale).toInt()
+            val scale = screenW.toFloat() / pageSize.width
+            val slideH = (pageSize.height * scale).toInt()
 
             val result = show.slides.map { slide ->
-                val bmp = Bitmap.createBitmap(screenW, slideH, Bitmap.Config.ARGB_8888)
-                Canvas(bmp).also { canvas ->
-                    canvas.drawColor(Color.WHITE)
-                    canvas.scale(scale, scale)
-                    slide.draw(canvas)
-                }
-                bmp
+                val image = BufferedImage(screenW, slideH, BufferedImage.TYPE_INT_ARGB)
+                val graphics = image.createGraphics()
+                graphics.color = Color.WHITE
+                graphics.fillRect(0, 0, screenW, slideH)
+                graphics.scale(scale.toDouble(), scale.toDouble())
+                slide.draw(graphics)
+                graphics.dispose()
+                image.toBitmap()
             }
             show.close()
             result

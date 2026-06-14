@@ -11,7 +11,7 @@ import java.io.File
  * RtfDocumentRenderer — renders RTF files using Android's built-in HTML engine.
  *
  * Rendering strategy:
- *  1. Reads the raw RTF file as UTF-8 text
+ *  1. Reads the raw RTF bytes using the declared \\ansicpg code page
  *  2. Maps common RTF formatting control words to HTML equivalents
  *     (\b → <b>, \i → <i>, \ul → <u>, \strike → <del>, \par → <br/>)
  *  3. Strips remaining control words and group delimiters
@@ -28,7 +28,8 @@ internal class RtfDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildSpanned(filePath: String): CharSequence {
-        val raw = File(filePath).readText(Charsets.UTF_8)
+        val bytes = File(filePath).readBytes()
+        val raw = decodeRtfBytes(bytes)
 
         // Step 1: remove nested RTF groups repeatedly
         var cleaned = raw
@@ -70,5 +71,25 @@ internal class RtfDocumentRenderer : DocumentRenderer {
             @Suppress("DEPRECATION")
             Html.fromHtml(cleaned)
         }
+    }
+
+    /** Decode RTF bytes using the declared \\ansicpg code page, or Windows-1252. */
+    private fun decodeRtfBytes(bytes: ByteArray): String {
+        val header = String(bytes, 0, minOf(bytes.size, 512), Charsets.ISO_8859_1)
+        val codePage = Regex("\\\\ansicpg(\\d+)")
+            .find(header)
+            ?.groupValues
+            ?.get(1)
+            ?.toIntOrNull()
+        val charset = when (codePage) {
+            65001 -> Charsets.UTF_8
+            1252, null -> Charsets.ISO_8859_1
+            else -> try {
+                charset("windows-$codePage")
+            } catch (_: Exception) {
+                Charsets.ISO_8859_1
+            }
+        }
+        return String(bytes, charset)
     }
 }

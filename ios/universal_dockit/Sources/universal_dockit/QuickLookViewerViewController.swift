@@ -28,7 +28,7 @@ final class QuickLookViewerViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.102, green: 0.102, blue: 0.18, alpha: 1)
+        view.backgroundColor = .white
         setupNavigationBar()
         embedPreviewController()
     }

@@ -5,7 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.File
-import java.io.FileReader
+import java.io.FileInputStream
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 
 /**
  * TxtDocumentRenderer — renders plain-text (.txt) files.
@@ -22,7 +24,9 @@ internal class TxtDocumentRenderer : DocumentRenderer {
     override suspend fun render(filePath: String, callbacks: RenderCallbacks) {
         val text = withContext(Dispatchers.IO) {
             val sb = StringBuilder()
-            BufferedReader(FileReader(filePath)).use { br ->
+            BufferedReader(
+                InputStreamReader(FileInputStream(filePath), StandardCharsets.UTF_8),
+            ).use { br ->
                 var line: String?
                 while (br.readLine().also { line = it } != null) {
                     sb.appendLine(line)
