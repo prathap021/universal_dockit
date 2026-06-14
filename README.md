@@ -26,7 +26,6 @@ Absolutely **no commercial dependencies**, **no cloud processing**, and **100% o
 
 The plugin intelligently routes each file type to the most appropriate native renderer:
 
-
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated, pinch-to-zoom) | **PDFKit** (Built-in) |
@@ -44,8 +43,8 @@ The plugin intelligently routes each file type to the most appropriate native re
 ## 🛠 Setup & Installation
 
 **Requirements:**
-* **Flutter SDK**: `>=3.10.0`
-* **Dart SDK**: `^3.0.0`
+* **Flutter SDK**: `>=3.3.0`
+* **Dart SDK**: `^3.12.1`
 
 Add `universal_dockit` to your `pubspec.yaml`:
 
