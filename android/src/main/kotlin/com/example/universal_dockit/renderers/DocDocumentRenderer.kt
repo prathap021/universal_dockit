@@ -31,15 +31,22 @@ internal class DocDocumentRenderer : DocumentRenderer {
 
     private fun buildHtml(filePath: String): String = buildString {
         append(HtmlTemplates.header("Word Document (.doc)"))
-        FileInputStream(filePath).use { fis ->
-            val doc      = HWPFDocument(fis)
-            val extractor = WordExtractor(doc)
-            for (line in extractor.text.lines()) {
-                if (line.isBlank()) append("<br/>")
-                else               append("<p>${line.esc()}</p>")
+
+        runCatching {
+            FileInputStream(filePath).use { fis ->
+                HWPFDocument(fis).use { doc ->
+                    WordExtractor(doc).text.lineSequence().forEach { line ->
+                        when {
+                            line.isBlank() -> append("<br/>\n")
+                            else -> append("<p>${line.esc()}</p>\n")
+                        }
+                    }
+                }
             }
-            doc.close()
+        }.onFailure { error ->
+            append("<p>Unable to read the legacy DOC file: ${error.message ?: "unknown error"}</p>")
         }
+
         append(HtmlTemplates.footer())
     }
 }

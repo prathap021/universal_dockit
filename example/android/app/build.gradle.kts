@@ -31,7 +31,9 @@ android {
             excludes += setOf(
                 "META-INF/DEPENDENCIES",
                 "META-INF/LICENSE",
+                "META-INF/LICENSE.md",
                 "META-INF/NOTICE",
+                "META-INF/NOTICE.md",
                 "META-INF/*.kotlin_module",
                 "META-INF/versions/**",
             )
@@ -47,6 +49,8 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

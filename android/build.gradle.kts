@@ -56,7 +56,9 @@ android {
             // Apache POI + PdfiumAndroid duplicate entries
             excludes += setOf(
                 "META-INF/NOTICE",
+                "META-INF/NOTICE.md",
                 "META-INF/LICENSE",
+                "META-INF/LICENSE.md",
                 "META-INF/DEPENDENCIES",
                 "META-INF/*.kotlin_module",
                 "META-INF/versions/**",
@@ -110,8 +112,8 @@ dependencies {
     // -------------------------------------------------------------------------
     // Apache POI 5.3.0 — open-source Office document parsing
     // https://poi.apache.org/  (Apache 2.0)
-    //  poi       : DOC, XLS, PPT  (legacy binary BIFF/OLE2 formats)
-    //  poi-ooxml : DOCX, XLSX, PPTX (OOXML/ZIP-based formats)
+    //  poi       : legacy DOC / XLS / PPT
+    //  poi-ooxml : DOCX / XLSX / PPTX (OOXML/ZIP-based formats)
     // -------------------------------------------------------------------------
     implementation("org.apache.poi:poi-ooxml:5.3.0") {
         exclude(group = "xml-apis", module = "xml-apis")
@@ -120,6 +122,13 @@ dependencies {
     implementation("org.apache.poi:poi:5.3.0")
     implementation("org.apache.poi:poi-scratchpad:5.3.0")
     implementation("org.apache.xmlbeans:xmlbeans:5.3.0")
+
+    // Modern OpenXML text extraction for DOCX files using docx4j.
+    // This keeps legacy binary Office formats on Apache POI while using a
+    // dedicated OpenXML parser for the DOCX path.
+    implementation("org.docx4j:docx4j-core:11.5.1")
+    implementation("org.docx4j:docx4j-JAXB-ReferenceImpl:11.5.1")
+    implementation("org.docx4j:docx4j-openxml-objects-pml:11.5.1")
     implementation("com.zaxxer:SparseBitSet:1.3")
     implementation("org.apache.commons:commons-collections4:4.4")
     implementation("org.apache.commons:commons-compress:1.27.1")

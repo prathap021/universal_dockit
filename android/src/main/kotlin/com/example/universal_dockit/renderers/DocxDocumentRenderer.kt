@@ -5,20 +5,21 @@ import com.example.universal_dockit.HtmlTemplates.esc
 import com.example.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.poi.xwpf.usermodel.UnderlinePatterns
-import org.apache.poi.xwpf.usermodel.XWPFDocument
-import java.io.FileInputStream
+import org.docx4j.TextUtils
+import org.docx4j.openpackaging.packages.WordprocessingMLPackage
+import java.io.File
 
 /**
- * DocxDocumentRenderer — renders DOCX files using Apache POI XWPFDocument.
+ * DocxDocumentRenderer — renders DOCX files using docx4j.
  *
- * Library : org.apache.poi:poi-ooxml:5.3.0 (Apache 2.0)
+ * Library : org.docx4j:docx4j-core / docx4j-JAXB-ReferenceImpl (Apache 2.0)
  *
  * Rendering strategy:
- *  - Iterates paragraphs and maps style names to HTML headings (H1/H2/H3)
- *  - Preserves inline formatting per run: bold, italic, underline, strikethrough
- *  - Renders tables as HTML <table> elements
- *  - Delivers HTML to [RenderCallbacks.showWebContent]
+ *  - Uses docx4j for OpenXML text extraction, which keeps the DOCX path
+ *    separate from legacy binary Office formats.
+ *  - Emits plain paragraph HTML for Android/JVM compatibility and large-file
+ *    performance.
+ *  - Delivers HTML to [RenderCallbacks.showWebContent].
  */
 internal class DocxDocumentRenderer : DocumentRenderer {
 
@@ -28,54 +29,22 @@ internal class DocxDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("Word Document"))
-        FileInputStream(filePath).use { fis ->
-            val doc = XWPFDocument(fis)
+        append(HtmlTemplates.header("Word Document (.docx)"))
 
-            // --- Paragraphs ---
-            for (para in doc.paragraphs) {
-                val style = para.style ?: ""
-                val text  = para.text
+        runCatching {
+            val document = WordprocessingMLPackage.load(File(filePath))
+            val text = TextUtils.getText(document)
+
+            text.lineSequence().forEach { line ->
                 when {
-                    style.contains("Heading1", ignoreCase = true) ||
-                    style.equals("Title", ignoreCase = true) ->
-                        append("<h1>${text.esc()}</h1>\n")
-
-                    style.contains("Heading2", ignoreCase = true) ->
-                        append("<h2>${text.esc()}</h2>\n")
-
-                    style.contains("Heading3", ignoreCase = true) ->
-                        append("<h3>${text.esc()}</h3>\n")
-
-                    text.isBlank() -> append("<br/>\n")
-
-                    else -> {
-                        append("<p>")
-                        for (run in para.runs) {
-                            var t = run.text().esc()
-                            if (run.isBold)         t = "<strong>$t</strong>"
-                            if (run.isItalic)        t = "<em>$t</em>"
-                            if (run.isStrikeThrough) t = "<del>$t</del>"
-                            if (run.underline != UnderlinePatterns.NONE) t = "<u>$t</u>"
-                            append(t)
-                        }
-                        append("</p>\n")
-                    }
+                    line.isBlank() -> append("<br/>\n")
+                    else -> append("<p>${line.esc()}</p>\n")
                 }
             }
-
-            // --- Tables ---
-            for (table in doc.tables) {
-                append("<div class='table-wrapper'><table>")
-                for (row in table.rows) {
-                    append("<tr>")
-                    for (cell in row.tableCells) append("<td>${cell.text.esc()}</td>")
-                    append("</tr>")
-                }
-                append("</table></div>\n")
-            }
-            doc.close()
+        }.onFailure { error ->
+            append("<p>Unable to read the DOCX file: ${error.message ?: "unknown error"}</p>")
         }
+
         append(HtmlTemplates.footer())
     }
 }

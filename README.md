@@ -29,14 +29,16 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated, pinch-to-zoom) | **PDFKit** (Built-in) |
-| **Word** | `.doc`, `.docx` | **Apache POI** → Styled HTML → WebView | **QuickLook** (Built-in) |
+| **Word** | `.docx` | **docx4j** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
+| **Word (Legacy)** | `.doc` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
 | **Excel** | `.xlsx` | **Apache POI** → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
 | **Excel (Legacy)**| `.xls` | **Apache POI** → HTML Table → WebView | **QuickLook** (Built-in) |
-| **PowerPoint**| `.ppt`, `.pptx` | **Apache POI** → Bitmap Slides → ScrollView | **QuickLook** (Built-in) |
+| **PowerPoint**| `.pptx` | **docx4j** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
+| **PowerPoint (Legacy)**| `.ppt` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
 | **CSV** | `.csv` | RFC-4180 Parser → HTML Table → WebView | Aligned Plain-text Table → `UITextView` |
 | **Rich Text** | `.rtf` | Tag Stripper → `Html.fromHtml` → `TextView` | `NSAttributedString` → `UITextView` |
-| **OpenDocument**| `.odt`, `.ods`, `.odp`| **Apache ODF Toolkit** → DOM Traversal → WebView| **QuickLook** (Built-in) |
+| **OpenDocument**| `.odt`, `.ods`, `.odp`| In-house ZIP/XML Parser → HTML → WebView| **QuickLook** (Built-in) |
 
 ---
 
@@ -135,5 +137,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 *Open-source libraries used internally:*
 * *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
 * *[Apache POI](https://poi.apache.org/) (Apache 2.0)*
-* *[Apache ODF Toolkit](https://odftoolkit.org/) (Apache 2.0)*
+* *[docx4j](https://github.com/plutext/docx4j) (Apache 2.0)*
 * *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
