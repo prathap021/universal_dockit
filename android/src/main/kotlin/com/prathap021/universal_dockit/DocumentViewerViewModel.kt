@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 
 class DocumentViewerViewModel : ViewModel() {
 
-    fun renderDocument(filePath: String, docType: String, callbacks: RenderCallbacks) {
+    internal fun renderDocument(filePath: String, docType: String, callbacks: RenderCallbacks) {
         val renderer: DocumentRenderer = when (docType.lowercase()) {
             "pdf" -> PdfDocumentRenderer()
             "docx", "doc" -> WordDocumentRenderer()
