@@ -19,12 +19,15 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.example.universal_dockit.renderers.CsvDocumentRenderer
 import com.example.universal_dockit.renderers.DocumentRenderer
-import com.example.universal_dockit.renderers.OdtDocumentRenderer
-import com.example.universal_dockit.renderers.OdsDocumentRenderer
+import com.example.universal_dockit.renderers.ExcelDocumentRenderer
 import com.example.universal_dockit.renderers.OdpDocumentRenderer
+import com.example.universal_dockit.renderers.OdsDocumentRenderer
+import com.example.universal_dockit.renderers.OdtDocumentRenderer
 import com.example.universal_dockit.renderers.PdfDocumentRenderer
+import com.example.universal_dockit.renderers.PowerPointDocumentRenderer
 import com.example.universal_dockit.renderers.RtfDocumentRenderer
 import com.example.universal_dockit.renderers.TxtDocumentRenderer
+import com.example.universal_dockit.renderers.WordDocumentRenderer
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import kotlinx.coroutines.CoroutineScope
@@ -96,34 +99,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     // ── Dispatcher ─────────────────────────────────────────────────────────
 
     private fun dispatch(filePath: String, docType: String) {
-        when (docType.lowercase()) {
-            "docx", "doc", "xlsx", "xls", "pptx", "ppt" -> {
-                // The library handles DOC, DOCX, XLS, XLSX, PPT, PPTX
-                try {
-                    val context = this
-                    val clazz = Class.forName("com.cherry.lib.doc.DocViewerActivity")
-                    val enumClass = Class.forName("com.cherry.lib.doc.bean.DocSourceType")
-                    val enumConstants = enumClass.enumConstants
-                    val pathEnum = enumConstants?.firstOrNull { it.toString() == "PATH" } 
-                        ?: enumConstants?.firstOrNull() // Fallback just in case
-
-                    val method = clazz.getMethod(
-                        "launchDocViewer",
-                        android.content.Context::class.java,
-                        enumClass,
-                        String::class.java
-                    )
-                    method.invoke(null, context, pathEnum, filePath)
-                    finish() // Close this wrapper activity
-                } catch (e: Exception) {
-                    showError("Failed to launch DocViewer: ${e.message}")
-                }
-                return
-            }
-        }
-
         val renderer: DocumentRenderer = when (docType.lowercase()) {
             "pdf" -> PdfDocumentRenderer()
+            "docx", "doc" -> WordDocumentRenderer()
+            "xlsx", "xls" -> ExcelDocumentRenderer()
+            "pptx", "ppt" -> PowerPointDocumentRenderer()
             "txt" -> TxtDocumentRenderer()
             "csv" -> CsvDocumentRenderer()
             "rtf" -> RtfDocumentRenderer()

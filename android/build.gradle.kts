@@ -110,10 +110,18 @@ dependencies {
     implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 
     // -------------------------------------------------------------------------
-    // DocViewer — open-source Office document parsing and rendering
-    // https://github.com/Victor2018/DocViewer
+    // Apache POI 5.3.0 — open-source Office document parsing
+    // https://poi.apache.org/  (Apache 2.0)
+    //  poi       : legacy DOC / XLS / PPT
+    //  poi-ooxml : DOCX / XLSX / PPTX (OOXML/ZIP-based formats)
     // -------------------------------------------------------------------------
-    implementation("com.github.Victor2018:DocViewer:+")
+    implementation("org.apache.poi:poi-ooxml:5.3.0") {
+        exclude(group = "xml-apis", module = "xml-apis")
+        exclude(group = "stax", module = "stax-api")
+    }
+    implementation("org.apache.poi:poi:5.3.0")
+    implementation("org.apache.poi:poi-scratchpad:5.3.0")
+    implementation("org.apache.xmlbeans:xmlbeans:5.3.0")
 
     // We removed docx4j completely and reverted back to using Apache POI for all Office formats.
 

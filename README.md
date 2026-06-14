@@ -29,9 +29,9 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
-| **Word (doc, docx)** | `.doc`, `.docx` | [DocViewer](https://github.com/Victor2018/DocViewer) | **QuickLook** (Built-in) |
-| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [DocViewer](https://github.com/Victor2018/DocViewer) | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
-| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [DocViewer](https://github.com/Victor2018/DocViewer) | **QuickLook** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | **Apache POI** → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
 | **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
 | **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
@@ -176,6 +176,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 *Open-source libraries used internally:*
 * *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
-* *[DocViewer](https://github.com/Victor2018/DocViewer) (Apache 2.0)*
+* *[Apache POI](https://poi.apache.org/) (Apache 2.0)*
 * *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
 * *[ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)*

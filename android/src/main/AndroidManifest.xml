@@ -15,12 +15,6 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:label="Document Viewer"
             android:hardwareAccelerated="true" />
-            
-        <activity
-            android:name="com.cherry.lib.doc.DocViewerActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppCompat.NoActionBar"
-            android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>
 
 </manifest>
