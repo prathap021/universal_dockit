@@ -30,11 +30,41 @@ internal object SlideShapeText {
     }
 
     private fun appendTextShape(shape: TextShape<*, *>, sb: StringBuilder) {
-        val text = try { shape.text?.trim().orEmpty() } catch (_: Exception) { "" }
-        if (text.isEmpty()) return
-        for (line in text.lines()) {
-            if (line.isBlank()) sb.append("<br/>")
-            else sb.append("<p>${line.esc()}</p>")
+        val paragraphs = try { shape.textParagraphs } catch (_: Exception) { null }
+        if (paragraphs.isNullOrEmpty()) return
+        
+        for (paragraph in paragraphs) {
+            var align = ""
+            try {
+                when (paragraph.textAlign) {
+                    org.apache.poi.sl.usermodel.TextParagraph.TextAlign.CENTER -> align = "text-align: center"
+                    org.apache.poi.sl.usermodel.TextParagraph.TextAlign.RIGHT -> align = "text-align: right"
+                    org.apache.poi.sl.usermodel.TextParagraph.TextAlign.JUSTIFY -> align = "text-align: justify"
+                    else -> {}
+                }
+            } catch (_: Exception) {}
+            
+            val pStyle = if (align.isNotEmpty()) " style='$align'" else ""
+            sb.append("<p$pStyle>")
+            
+            val runs = try { paragraph.textRuns } catch (_: Exception) { emptyList() }
+            for (run in runs) {
+                val text = run.rawText ?: continue
+                
+                val styles = mutableListOf<String>()
+                try {
+                    if (run.isBold == true) styles.add("font-weight: bold")
+                    if (run.isItalic == true) styles.add("font-style: italic")
+                    if (run.isUnderlined == true) styles.add("text-decoration: underline")
+                    val fontSize = run.fontSize
+                    if (fontSize != null && fontSize > 0) styles.add("font-size: ${fontSize}pt")
+                } catch (_: Exception) {}
+                
+                val runStyle = if (styles.isNotEmpty()) " style='${styles.joinToString(";")}'" else ""
+                val escaped = text.replace("\r", "").replace("\n", "<br/>").esc()
+                sb.append("<span$runStyle>$escaped</span>")
+            }
+            sb.append("</p>")
         }
     }
 

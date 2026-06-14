@@ -27,7 +27,17 @@ internal object SpreadsheetHtmlBuilder {
      */
     fun build(filePath: String, isXlsx: Boolean): String = buildString {
         append(HtmlTemplates.header("Spreadsheet", accentColor = "#217346"))
-        FileInputStream(filePath).use { fis ->
+        
+        append("""
+            <style>
+                table { border-collapse: collapse; table-layout: fixed; min-width: 100%; }
+                th, td { border: 1px solid #d0d7e5; padding: 4px 8px; overflow: hidden; word-wrap: break-word; }
+                th { background-color: #f3f5f9; font-weight: bold; }
+                .sheet-title { color: #217346; margin-top: 24px; border-bottom: 2px solid #217346; padding-bottom: 4px; }
+            </style>
+        """.trimIndent())
+
+        java.io.FileInputStream(filePath).use { fis ->
             val workbook = if (isXlsx) XSSFWorkbook(fis) else HSSFWorkbook(fis)
             workbook.use { wb ->
                 val evaluator = wb.creationHelper.createFormulaEvaluator()
@@ -37,14 +47,39 @@ internal object SpreadsheetHtmlBuilder {
                     append("<h2 class='sheet-title'>${sheet.sheetName.esc()}</h2>")
                     append("<div class='table-wrapper'><table>")
 
+                    // Generate a <colgroup> for column widths
+                    if (sheet.physicalNumberOfRows > 0) {
+                        val firstRow = sheet.getRow(sheet.firstRowNum)
+                        if (firstRow != null) {
+                            append("<colgroup>")
+                            for (colIdx in firstRow.firstCellNum until firstRow.lastCellNum) {
+                                val width = sheet.getColumnWidth(colIdx.toInt()) / 256
+                                // Approximate pixels per character width
+                                val pxWidth = if (width > 0) width * 7 else 80
+                                append("<col style='width: ${pxWidth}px;'>")
+                            }
+                            append("</colgroup>")
+                        }
+                    }
+
                     for (rowIdx in sheet.firstRowNum..sheet.lastRowNum) {
                         val row = sheet.getRow(rowIdx) ?: continue
-                        append("<tr>")
+                        // Row height
+                        val rowHeight = row.heightInPoints
+                        val trStyle = if (rowHeight > 0) " style='height: ${rowHeight}pt;'" else ""
+                        
+                        append("<tr$trStyle>")
                         for (colIdx in row.firstCellNum until row.lastCellNum) {
-                            val cell = row.getCell(colIdx)
-                            val value = cell?.let {
-                                try {
-                                    val ev = evaluator.evaluate(it)
+                            val cell = row.getCell(colIdx.toInt())
+                            
+                            var cellContent = ""
+                            var inlineStyle = ""
+                            val tag = if (rowIdx == sheet.firstRowNum) "th" else "td"
+
+                            if (cell != null) {
+                                // Value
+                                cellContent = try {
+                                    val ev = evaluator.evaluate(cell)
                                     when (ev?.cellType) {
                                         CellType.NUMERIC -> {
                                             val n = ev.numberValue
@@ -53,12 +88,53 @@ internal object SpreadsheetHtmlBuilder {
                                         }
                                         CellType.STRING  -> ev.stringValue
                                         CellType.BOOLEAN -> ev.booleanValue.toString()
-                                        else             -> it.toString()
+                                        else             -> cell.toString()
                                     }
-                                } catch (_: Exception) { it.toString() }
-                            } ?: ""
-                            val tag = if (rowIdx == sheet.firstRowNum) "th" else "td"
-                            append("<$tag>${value.esc()}</$tag>")
+                                } catch (_: Exception) { cell.toString() }
+
+                                // Styling
+                                val style = cell.cellStyle
+                                if (style != null) {
+                                    val font = wb.getFontAt(style.fontIndexAsInt)
+                                    val bgRgb = extractColorRgb(style.fillForegroundColorColor)
+                                    val fontRgb = when (font) {
+                                        is org.apache.poi.xssf.usermodel.XSSFFont -> extractColorRgb(font.xssfColor)
+                                        is org.apache.poi.hssf.usermodel.HSSFFont -> {
+                                            val palette = (wb as? HSSFWorkbook)?.customPalette
+                                            val hssfColor = palette?.getColor(font.color)
+                                            extractColorRgb(hssfColor)
+                                        }
+                                        else -> null
+                                    }
+                                    
+                                    val styles = mutableListOf<String>()
+                                    
+                                    if (bgRgb != null) styles.add("background-color: $bgRgb")
+                                    if (fontRgb != null) styles.add("color: $fontRgb")
+                                    if (font.bold) styles.add("font-weight: bold")
+                                    if (font.italic) styles.add("font-style: italic")
+                                    if (font.fontHeightInPoints > 0) styles.add("font-size: ${font.fontHeightInPoints}pt")
+                                    
+                                    when (style.alignment) {
+                                        org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER -> styles.add("text-align: center")
+                                        org.apache.poi.ss.usermodel.HorizontalAlignment.RIGHT -> styles.add("text-align: right")
+                                        else -> {}
+                                    }
+                                    
+                                    when (style.verticalAlignment) {
+                                        org.apache.poi.ss.usermodel.VerticalAlignment.TOP -> styles.add("vertical-align: top")
+                                        org.apache.poi.ss.usermodel.VerticalAlignment.CENTER -> styles.add("vertical-align: middle")
+                                        org.apache.poi.ss.usermodel.VerticalAlignment.BOTTOM -> styles.add("vertical-align: bottom")
+                                        else -> {}
+                                    }
+
+                                    if (styles.isNotEmpty()) {
+                                        inlineStyle = " style='${styles.joinToString(";")}'"
+                                    }
+                                }
+                            }
+
+                            append("<$tag$inlineStyle>${cellContent.esc()}</$tag>")
                         }
                         append("</tr>")
                     }
@@ -67,5 +143,20 @@ internal object SpreadsheetHtmlBuilder {
             }
         }
         append(HtmlTemplates.footer())
+    }
+
+    private fun extractColorRgb(color: org.apache.poi.ss.usermodel.Color?): String? {
+        if (color == null) return null
+        return when (color) {
+            is org.apache.poi.xssf.usermodel.XSSFColor -> {
+                val argb = color.argbHex ?: return null
+                if (argb.length == 8) "#${argb.substring(2)}" else "#$argb"
+            }
+            is org.apache.poi.hssf.util.HSSFColor -> {
+                val rgb = color.triplet
+                "rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})"
+            }
+            else -> null
+        }
     }
 }

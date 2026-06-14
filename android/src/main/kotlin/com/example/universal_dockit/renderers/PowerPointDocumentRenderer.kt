@@ -20,6 +20,27 @@ internal class PowerPointDocumentRenderer : DocumentRenderer {
         val extName = if (isPptx) ".pptx" else ".ppt"
         append(HtmlTemplates.header("PowerPoint Presentation ($extName)", accentColor = "#D24726"))
         
+        append("""
+            <style>
+                body { background-color: #f3f3f3; padding: 16px; font-family: sans-serif; }
+                .slide-divider { margin: 24px 0 8px 0; font-weight: bold; color: #555; }
+                .slide-content { 
+                    background-color: white; 
+                    border: 1px solid #ccc; 
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+                    min-height: 400px; 
+                    padding: 32px; 
+                    margin-bottom: 24px;
+                    border-radius: 4px;
+                    overflow: hidden;
+                    position: relative;
+                }
+                .table-wrapper { overflow-x: auto; margin-top: 16px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid #d0d7e5; padding: 8px; }
+            </style>
+        """.trimIndent())
+        
         runCatching {
             FileInputStream(filePath).use { fis ->
                 if (isPptx) {
