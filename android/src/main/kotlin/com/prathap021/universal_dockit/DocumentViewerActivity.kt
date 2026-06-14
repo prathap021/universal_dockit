@@ -66,7 +66,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     private var darkMode: Boolean = false
 
-    private lateinit var progressBar: ProgressBar
+    private lateinit var loadingContainer: View
     private lateinit var errorView: TextView
     private var pdfView: PDFView? = null
     private lateinit var webView: WebView
@@ -141,7 +141,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             textView.setTextColor(if (darkMode) Color.parseColor("#E0E0E0") else Color.parseColor("#111111"))
             textScrollView.setBackgroundColor(if (darkMode) Color.parseColor("#121212") else Color.WHITE)
             textView.text = text
-            progressBar.isVisible = false
+            loadingContainer.isVisible = false
         }
 
     override suspend fun showPdf(file: File) = withContext(Dispatchers.Main) {
@@ -165,9 +165,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             .spacing(8)
             .scrollHandle(DefaultScrollHandle(this@DocumentViewerActivity))
             .nightMode(darkMode)
-            .onLoad { _ -> progressBar.isVisible = false }
+            .onLoad { _ -> loadingContainer.isVisible = false }
             .onError { e ->
-                progressBar.isVisible = false
+                loadingContainer.isVisible = false
                 showError("PDF error: ${e.message}")
             }
             .load()
@@ -176,7 +176,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     override fun showError(message: String) {
         runOnUiThread {
             hideContent()
-            progressBar.isVisible = false
+            loadingContainer.isVisible = false
             errorView.isVisible = true
             errorView.text = "⚠️  $message"
         }
@@ -185,7 +185,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     // ── View helpers ───────────────────────────────────────────────────────
 
     private fun showLoading() {
-        progressBar.isVisible = true
+        loadingContainer.isVisible = true
         hideContent()
     }
 
@@ -234,7 +234,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
-                    progressBar.isVisible = false
+                    loadingContainer.isVisible = false
                 }
 
                 override fun onReceivedError(
@@ -242,7 +242,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                     request: WebResourceRequest?,
                     error: WebResourceError?,
                 ) {
-                    progressBar.isVisible = false
+                    loadingContainer.isVisible = false
                 }
             }
         }
@@ -264,16 +264,32 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
         root.addView(content)
 
-        // Centered loading overlay (drawn last → on top)
-        progressBar = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
+        loadingContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER)
-            indeterminateTintList =
-                android.content.res.ColorStateList.valueOf(ACCENT)
+            gravity = Gravity.CENTER
+            isVisible = false
         }
-        root.addView(progressBar)
+
+        val spinner = ProgressBar(this, null, android.R.attr.progressBarStyleLarge).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP)
+            indeterminateTintList = android.content.res.ColorStateList.valueOf(ACCENT)
+        }
+        (loadingContainer as LinearLayout).addView(spinner)
+
+        val loadingText = TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply {
+                topMargin = 16
+            }
+            text = "Loading document..."
+            textSize = 14f
+            setTextColor(if (darkMode) Color.parseColor("#B0B0B0") else Color.parseColor("#666666"))
+        }
+        (loadingContainer as LinearLayout).addView(loadingText)
+
+        root.addView(loadingContainer)
 
         return root
-    }
 
     private val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
     private val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
