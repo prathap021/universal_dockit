@@ -1,7 +1,9 @@
 name: universal_dockit
 description: A cross-platform document viewer plugin that enables Flutter applications to open and display common document formats such as PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, EPUB, CBZ, TXT, RTF, CSV, and OpenDocument files using native Android and iOS document rendering capabilities through Method Channels.
 version: 1.0.0
-homepage: https://github.com/prathap021/universal_dockit
+homepage: https://github.com/RanaPrathap/universal_dockit
+repository: https://github.com/RanaPrathap/universal_dockit
+issue_tracker: https://github.com/RanaPrathap/universal_dockit/issues
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
