@@ -101,8 +101,8 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                 // The library handles DOC, DOCX, XLS, XLSX, PPT, PPTX
                 try {
                     val context = this
-                    val clazz = Class.forName("com.victor.docviewer.DocViewerActivity")
-                    val enumClass = Class.forName("com.victor.docviewer.DocSourceType")
+                    val clazz = Class.forName("com.cherry.lib.doc.DocViewerActivity")
+                    val enumClass = Class.forName("com.cherry.lib.doc.bean.DocSourceType")
                     val enumConstants = enumClass.enumConstants
                     val pathEnum = enumConstants?.firstOrNull { it.toString() == "PATH" } 
                         ?: enumConstants?.firstOrNull() // Fallback just in case
@@ -116,24 +116,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                     method.invoke(null, context, pathEnum, filePath)
                     finish() // Close this wrapper activity
                 } catch (e: Exception) {
-                    try {
-                        // Fallback package names if com.victor.docviewer is wrong
-                        val clazz = Class.forName("com.github.victor2018.docviewer.DocViewerActivity")
-                        val enumClass = Class.forName("com.github.victor2018.docviewer.DocSourceType")
-                        val enumConstants = enumClass.enumConstants
-                        val pathEnum = enumConstants?.firstOrNull { it.toString() == "PATH" } 
-                        
-                        val method = clazz.getMethod(
-                            "launchDocViewer",
-                            android.content.Context::class.java,
-                            enumClass,
-                            String::class.java
-                        )
-                        method.invoke(null, this, pathEnum, filePath)
-                        finish()
-                    } catch (e2: Exception) {
-                        showError("Failed to launch DocViewer: ${e.message}\n${e2.message}")
-                    }
+                    showError("Failed to launch DocViewer: ${e.message}")
                 }
                 return
             }
