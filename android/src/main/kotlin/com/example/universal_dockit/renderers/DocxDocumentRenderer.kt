@@ -5,21 +5,18 @@ import com.example.universal_dockit.HtmlTemplates.esc
 import com.example.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.docx4j.TextUtils
-import org.docx4j.openpackaging.packages.WordprocessingMLPackage
-import java.io.File
+import org.apache.poi.xwpf.extractor.XWPFWordExtractor
+import org.apache.poi.xwpf.usermodel.XWPFDocument
+import java.io.FileInputStream
 
 /**
- * DocxDocumentRenderer — renders DOCX files using docx4j.
+ * DocxDocumentRenderer — renders DOCX files using Apache POI XWPFDocument.
  *
- * Library : org.docx4j:docx4j-core / docx4j-JAXB-ReferenceImpl (Apache 2.0)
+ * Library : org.apache.poi:poi-ooxml:5.3.0
  *
  * Rendering strategy:
- *  - Uses docx4j for OpenXML text extraction, which keeps the DOCX path
- *    separate from legacy binary Office formats.
- *  - Emits plain paragraph HTML for Android/JVM compatibility and large-file
- *    performance.
- *  - Delivers HTML to [RenderCallbacks.showWebContent].
+ *  - Uses XWPFWordExtractor for full text extraction
+ *  - Emits plain paragraph HTML for Android/JVM compatibility
  */
 internal class DocxDocumentRenderer : DocumentRenderer {
 
@@ -29,16 +26,17 @@ internal class DocxDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("Word Document (.docx)"))
+        append(HtmlTemplates.header("Word Document (.docx)", accentColor = "#2B579A"))
 
         runCatching {
-            val document = WordprocessingMLPackage.load(File(filePath))
-            val text = TextUtils.getText(document)
-
-            text.lineSequence().forEach { line ->
-                when {
-                    line.isBlank() -> append("<br/>\n")
-                    else -> append("<p>${line.esc()}</p>\n")
+            FileInputStream(filePath).use { fis ->
+                XWPFDocument(fis).use { doc ->
+                    XWPFWordExtractor(doc).text.lineSequence().forEach { line ->
+                        when {
+                            line.isBlank() -> append("<br/>\n")
+                            else -> append("<p>${line.esc()}</p>\n")
+                        }
+                    }
                 }
             }
         }.onFailure { error ->

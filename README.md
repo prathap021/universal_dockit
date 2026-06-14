@@ -29,11 +29,11 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated, pinch-to-zoom) | **PDFKit** (Built-in) |
-| **Word** | `.docx` | **docx4j** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
+| **Word** | `.docx` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
 | **Word (Legacy)** | `.doc` | **Apache POI** → Paragraph HTML → WebView | **QuickLook** (Built-in) |
 | **Excel** | `.xlsx` | **Apache POI** → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
 | **Excel (Legacy)**| `.xls` | **Apache POI** → HTML Table → WebView | **QuickLook** (Built-in) |
-| **PowerPoint**| `.pptx` | **docx4j** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
+| **PowerPoint**| `.pptx` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
 | **PowerPoint (Legacy)**| `.ppt` | **Apache POI** → Text/HTML Slides → WebView | **QuickLook** (Built-in) |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
 | **CSV** | `.csv` | RFC-4180 Parser → HTML Table → WebView | Aligned Plain-text Table → `UITextView` |

@@ -2,18 +2,10 @@ package com.example.universal_dockit
 
 /**
  * HtmlTemplates — shared HTML page template used by all WebView-based renderers.
- *
- * Provides a consistent dark-themed stylesheet across DOC/DOCX, XLS/XLSX,
- * CSV, and ODF renderers. All renderers inject their content between
- * [header] and [footer].
  */
 internal object HtmlTemplates {
 
-    /**
-     * Returns a complete HTML page opening — DOCTYPE, head, meta, and styled body open tag.
-     * @param title Document title shown in the page (also used for accessibility).
-     */
-    fun header(title: String): String = """
+    fun header(title: String, accentColor: String = "#E94560"): String = """
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -24,11 +16,10 @@ internal object HtmlTemplates {
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
           
           :root {
-            /* Preserving existing color variables, but tweaking for modern feel */
             --bg:      #FFFFFF;
             --surface: #F8F9FA;
-            --accent:  #E94560;
-            --accent-light: #FFECEF;
+            --accent:  $accentColor;
+            --accent-light: ${accentColor}1A; /* 10% opacity */
             --text:    #1A1A1A;
             --muted:   #6C757D;
             --border:  #EAEAEA;
@@ -36,19 +27,6 @@ internal object HtmlTemplates {
             --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
           }
           
-          @media (prefers-color-scheme: dark) {
-            :root {
-              --bg:      #121212;
-              --surface: #1E1E1E;
-              --text:    #F5F5F5;
-              --muted:   #A0A0A0;
-              --border:  #2C2C2C;
-              --accent-light: rgba(233, 69, 96, 0.15);
-              --shadow-sm: 0 4px 12px rgba(0,0,0,0.2);
-              --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
-            }
-          }
-
           * { box-sizing: border-box; margin: 0; padding: 0; }
           
           body {
@@ -60,7 +38,6 @@ internal object HtmlTemplates {
             padding: 24px 16px;
             max-width: 800px;
             margin: 0 auto;
-            transition: background 0.3s ease, color 0.3s ease;
           }
           
           /* Typography */
@@ -77,41 +54,39 @@ internal object HtmlTemplates {
           h4 { font-size: 1.1em; }
           p  { margin: 8px 0 16px; color: var(--text); }
           
-          /* Tables */
+          /* Tables (Structured Excel) */
           .table-wrapper { 
             overflow-x: auto; 
             margin: 20px 0; 
-            border-radius: 12px;
+            border-radius: 8px;
             box-shadow: var(--shadow-sm);
             background: var(--surface);
           }
           table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            background: transparent;
+            border-collapse: collapse;
+            background: white;
+            border: 1px solid var(--border);
           }
           th {
             background: var(--accent);
             color: white;
             font-weight: 600;
-            padding: 14px 16px;
+            padding: 12px 14px;
             text-align: left;
-            font-size: 14px;
+            font-size: 13px;
             white-space: nowrap;
             letter-spacing: 0.02em;
+            border: 1px solid rgba(255,255,255,0.2);
           }
-          th:first-child { border-top-left-radius: 12px; }
-          th:last-child { border-top-right-radius: 12px; }
           td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            font-size: 13px;
             color: var(--text);
-            transition: background 0.2s ease;
+            background: white;
           }
-          tr:last-child td { border-bottom: none; }
-          tr:hover td { background: var(--accent-light); }
+          tr:hover td { background: var(--surface); }
           
           /* Presentation / Spreadsheets */
           .sheet-title {
@@ -165,13 +140,8 @@ internal object HtmlTemplates {
         <body>
     """.trimIndent()
 
-    /** Closes the HTML page opened by [header]. */
     fun footer(): String = "\n</body></html>"
 
-    /**
-     * Escapes [String] for safe embedding in HTML content.
-     * Handles the five standard XML/HTML special characters.
-     */
     fun String.esc(): String = this
         .replace("&", "&amp;")
         .replace("<", "&lt;")

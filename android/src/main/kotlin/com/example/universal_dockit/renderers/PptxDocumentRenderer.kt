@@ -1,23 +1,16 @@
 package com.example.universal_dockit.renderers
 
 import com.example.universal_dockit.HtmlTemplates
-import com.example.universal_dockit.HtmlTemplates.esc
 import com.example.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.docx4j.TextUtils
-import org.docx4j.openpackaging.packages.PresentationMLPackage
-import java.io.File
+import org.apache.poi.xslf.usermodel.XMLSlideShow
+import java.io.FileInputStream
 
 /**
  * PptxDocumentRenderer — renders PPTX files as a styled HTML "deck".
  *
- * Library : org.docx4j:docx4j-core / docx4j-openxml-objects-pml (Apache 2.0)
- *
- * Text-only rendering strategy:
- *  - Opens the slide show with [PresentationMLPackage]
- *  - Emits a "Slide N" divider for each slide
- *  - Extracts text using docx4j's TextUtils
+ * Library : org.apache.poi:poi-ooxml:5.3.0
  */
 internal class PptxDocumentRenderer : DocumentRenderer {
 
@@ -27,20 +20,21 @@ internal class PptxDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("PowerPoint Presentation"))
+        append(HtmlTemplates.header("PowerPoint Presentation (.pptx)", accentColor = "#D24726"))
         runCatching {
-            val document = PresentationMLPackage.load(File(filePath)) as PresentationMLPackage
-            val slideParts = document.mainPresentationPart.slideParts
-            slideParts?.forEachIndexed { index, slidePart ->
-                append("<div class='slide-divider'>Slide ${index + 1}</div>")
-                append("<div class='slide-content'>")
-                val text = TextUtils.getText(slidePart.jaxbElement)
-                text.lineSequence().forEach { line ->
-                    if (line.isNotBlank()) {
-                        append("<p>${line.esc()}</p>\n")
+            FileInputStream(filePath).use { fis ->
+                XMLSlideShow(fis).use { show ->
+                    show.slides.forEachIndexed { index, slide ->
+                        append("<div class='slide-divider'>Slide ${index + 1}</div>")
+                        append("<div class='slide-content'>")
+                        @Suppress("UNCHECKED_CAST")
+                        SlideShapeText.walk(
+                            slide.shapes as Iterable<org.apache.poi.sl.usermodel.Shape<*, *>>,
+                            this@buildString,
+                        )
+                        append("</div>")
                     }
                 }
-                append("</div>")
             }
         }.onFailure { error ->
             append("<p>Unable to read the PPTX file: ${error.message ?: "unknown error"}</p>")

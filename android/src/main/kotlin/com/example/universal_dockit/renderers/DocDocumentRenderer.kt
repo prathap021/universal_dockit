@@ -30,7 +30,7 @@ internal class DocDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("Word Document (.doc)"))
+        append(HtmlTemplates.header("Word Document (.doc)", accentColor = "#2B579A"))
 
         runCatching {
             FileInputStream(filePath).use { fis ->

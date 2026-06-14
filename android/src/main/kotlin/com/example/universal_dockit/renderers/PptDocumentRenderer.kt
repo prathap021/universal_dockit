@@ -23,16 +23,18 @@ internal class PptDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("PowerPoint Presentation (.ppt)"))
+        append(HtmlTemplates.header("PowerPoint Presentation (.ppt)", accentColor = "#D24726"))
         FileInputStream(filePath).use { fis ->
             HSLFSlideShow(fis).use { show ->
                 show.slides.forEachIndexed { index, slide ->
                     append("<div class='slide-divider'>Slide ${index + 1}</div>")
+                    append("<div class='slide-content'>")
                     @Suppress("UNCHECKED_CAST")
                     SlideShapeText.walk(
                         slide.shapes as Iterable<org.apache.poi.sl.usermodel.Shape<*, *>>,
                         this@buildString,
                     )
+                    append("</div>")
                 }
             }
         }

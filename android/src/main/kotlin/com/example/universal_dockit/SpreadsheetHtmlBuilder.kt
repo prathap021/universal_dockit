@@ -26,7 +26,7 @@ internal object SpreadsheetHtmlBuilder {
      * @param isXlsx true → XSSFWorkbook (.xlsx), false → HSSFWorkbook (.xls)
      */
     fun build(filePath: String, isXlsx: Boolean): String = buildString {
-        append(HtmlTemplates.header("Spreadsheet"))
+        append(HtmlTemplates.header("Spreadsheet", accentColor = "#217346"))
         FileInputStream(filePath).use { fis ->
             val workbook = if (isXlsx) XSSFWorkbook(fis) else HSSFWorkbook(fis)
             workbook.use { wb ->

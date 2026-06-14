@@ -123,18 +123,7 @@ dependencies {
     implementation("org.apache.poi:poi-scratchpad:5.3.0")
     implementation("org.apache.xmlbeans:xmlbeans:5.3.0")
 
-    // Modern OpenXML text extraction for DOCX files using docx4j.
-    // This keeps legacy binary Office formats on Apache POI while using a
-    // dedicated OpenXML parser for the DOCX path.
-    implementation("org.docx4j:docx4j-core:11.5.1")
-    implementation("org.docx4j:docx4j-JAXB-ReferenceImpl:11.5.1")
-    implementation("org.docx4j:docx4j-openxml-objects-pml:11.5.1")
-    implementation("com.zaxxer:SparseBitSet:1.3")
-    implementation("org.apache.commons:commons-collections4:4.4")
-    implementation("org.apache.commons:commons-compress:1.27.1")
-    implementation("org.apache.commons:commons-math3:3.6.1")
-    implementation("commons-codec:commons-codec:1.18.0")
-    implementation("commons-io:commons-io:2.19.0")
+    // We removed docx4j completely and reverted back to using Apache POI for all Office formats.
 
     // -------------------------------------------------------------------------
     // OpenDocument (.odt/.ods/.odp) is parsed in-house via ZIP + XmlPullParser
