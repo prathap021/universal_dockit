@@ -127,11 +127,18 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     // ── RenderCallbacks ────────────────────────────────────────────────────
 
-    override suspend fun showWebContent(html: String) = withContext(Dispatchers.Main) {
+    override suspend fun showWebContent(html: String, baseUrl: String?) = withContext(Dispatchers.Main) {
         // Loader stays visible until WebViewClient.onPageFinished() fires.
         hideContent()
         webView.isVisible = true
-        webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+        
+        if (baseUrl != null) {
+            webView.settings.allowFileAccess = true
+            webView.settings.allowContentAccess = true
+            webView.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
+        } else {
+            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+        }
     }
 
     override suspend fun showText(text: CharSequence, monospace: Boolean) =

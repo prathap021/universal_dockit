@@ -25,6 +25,9 @@ Pod::Spec.new do |s|
   # https://github.com/CoreOffice/CoreXLSX
   s.dependency 'CoreXLSX', '~> 0.14'
 
+  # ZIPFoundation (MIT) — pure-Swift ZIP library for EPUB/CBZ extraction
+  s.dependency 'ZIPFoundation', '~> 0.9'
+
   # ── Built-in Apple frameworks (no cost, no third-party code) ─────────────
   #   PDFKit    — PDF rendering     (iOS 11+)
   #   QuickLook — Office/ODF preview (iOS 12+)

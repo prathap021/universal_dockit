@@ -106,6 +106,14 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
             case "txt":
                 viewController = TxtViewerViewController(fileURL: url)
 
+            // ── EPUB ─────────────────────────────────────────────────────────
+            case "epub":
+                viewController = EpubViewerViewController(fileURL: url)
+
+            // ── CBZ ──────────────────────────────────────────────────────────
+            case "cbz":
+                viewController = CbzViewerViewController(fileURL: url)
+
             // ── CSV ──────────────────────────────────────────────────────────
             // UITextView with monospace font. RFC-4180 parser produces a
             // column-aligned plain-text table with │ separators.

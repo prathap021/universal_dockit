@@ -22,7 +22,7 @@ internal interface RenderCallbacks {
      * Display HTML content in the shared WebView.
      * Used by: DOC, DOCX, XLS, XLSX, PPT, PPTX, CSV, ODT, ODS, ODP renderers.
      */
-    suspend fun showWebContent(html: String)
+    suspend fun showWebContent(html: String, baseUrl: String? = null)
 
     /**
      * Display plain or attributed text in the shared TextView.
