@@ -41,7 +41,7 @@ final class RtfViewerViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = .white
+        view.backgroundColor = .systemBackground
         title = fileURL.lastPathComponent
         applyNavBarTheme()
 
@@ -55,8 +55,8 @@ final class RtfViewerViewController: UIViewController {
 
         textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.backgroundColor = .white
-        textView.textColor       = .darkText
+        textView.backgroundColor = .systemBackground
+        textView.textColor       = .label
         textView.font            = UIFont.systemFont(ofSize: 15)
         textView.isEditable      = false
         textView.isSelectable    = true

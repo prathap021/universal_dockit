@@ -150,6 +150,11 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
 
             let nav = UINavigationController(rootViewController: viewController)
             nav.modalPresentationStyle = .fullScreen
+            
+            if let isDark = features["darkMode"] as? Bool, isDark {
+                nav.overrideUserInterfaceStyle = .dark
+            }
+            
             rootVC.present(nav, animated: true)
             result(true)
         }

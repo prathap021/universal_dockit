@@ -36,7 +36,7 @@ final class TxtViewerViewController: UIViewController {
     // MARK: - UI Setup
 
     private func setupUI() {
-        view.backgroundColor = .white
+        view.backgroundColor = .systemBackground
         title = fileURL.lastPathComponent
         applyNavBarTheme()
 
@@ -50,8 +50,8 @@ final class TxtViewerViewController: UIViewController {
 
         textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
-        textView.backgroundColor = .white
-        textView.textColor       = .darkText
+        textView.backgroundColor = .systemBackground
+        textView.textColor       = .label
         textView.font            = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
         textView.isEditable      = false
         textView.isSelectable    = true

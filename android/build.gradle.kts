@@ -101,6 +101,10 @@ dependencies {
     // Coroutines for async document loading
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
+    // Lifecycle aware ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.activity:activity-ktx:1.9.3")
+
     // -------------------------------------------------------------------------
     // PdfiumAndroid — open-source PDF rendering (via barteksc android-pdf-viewer)
     // https://github.com/barteksc/AndroidPdfViewer  (Apache 2.0)

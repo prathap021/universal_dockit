@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.example.universal_dockit.renderers.CsvDocumentRenderer
@@ -30,11 +31,7 @@ import com.example.universal_dockit.renderers.TxtDocumentRenderer
 import com.example.universal_dockit.renderers.WordDocumentRenderer
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -62,10 +59,12 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         const val EXTRA_DOC_TYPE = "extra_doc_type"
     }
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val viewModel: DocumentViewerViewModel by viewModels()
 
     override val context get() = this
     override val displayMetrics get() = resources.displayMetrics
+
+    private var darkMode: Boolean = false
 
     private lateinit var progressBar: ProgressBar
     private lateinit var errorView: TextView
@@ -76,6 +75,10 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val features = intent.getSerializableExtra("features") as? HashMap<String, Any>
+        darkMode = features?.get("darkMode") as? Boolean ?: false
+
         setContentView(buildContentView())
 
         val filePath = intent.getStringExtra(EXTRA_FILE_PATH) ?: run {
@@ -91,38 +94,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         dispatch(filePath, docType)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        scope.cancel()
-    }
-
     // ── Dispatcher ─────────────────────────────────────────────────────────
 
     private fun dispatch(filePath: String, docType: String) {
-        val renderer: DocumentRenderer = when (docType.lowercase()) {
-            "pdf" -> PdfDocumentRenderer()
-            "docx", "doc" -> WordDocumentRenderer()
-            "xlsx", "xls" -> ExcelDocumentRenderer()
-            "pptx", "ppt" -> PowerPointDocumentRenderer()
-            "txt" -> TxtDocumentRenderer()
-            "csv" -> CsvDocumentRenderer()
-            "rtf" -> RtfDocumentRenderer()
-            "odt" -> OdtDocumentRenderer()
-            "ods" -> OdsDocumentRenderer()
-            "odp" -> OdpDocumentRenderer()
-            else -> {
-                showError("Unsupported document type: $docType"); return
-            }
-        }
-
         showLoading()
-        scope.launch {
-            try {
-                renderer.render(filePath, this@DocumentViewerActivity)
-            } catch (e: Throwable) {
-                showError("Failed to render document\n${e.javaClass.simpleName}: ${e.message ?: ""}")
-            }
-        }
+        viewModel.renderDocument(filePath, docType, this)
     }
 
     // ── RenderCallbacks ────────────────────────────────────────────────────
@@ -132,12 +108,22 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         hideContent()
         webView.isVisible = true
         
+        var finalHtml = html
+        if (darkMode) {
+            val darkCss = "<style>body { background-color: #121212 !important; color: #E0E0E0 !important; } table, th, td { border-color: #555 !important; }</style>"
+            finalHtml = if (finalHtml.contains("</head>")) {
+                finalHtml.replace("</head>", "$darkCss</head>")
+            } else {
+                darkCss + finalHtml
+            }
+        }
+        
         if (baseUrl != null) {
             webView.settings.allowFileAccess = true
             webView.settings.allowContentAccess = true
-            webView.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
+            webView.loadDataWithBaseURL(baseUrl, finalHtml, "text/html", "UTF-8", null)
         } else {
-            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+            webView.loadDataWithBaseURL(null, finalHtml, "text/html", "UTF-8", null)
         }
     }
 
@@ -152,6 +138,8 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                 textView.typeface = android.graphics.Typeface.DEFAULT
                 textView.textSize = 15f
             }
+            textView.setTextColor(if (darkMode) Color.parseColor("#E0E0E0") else Color.parseColor("#111111"))
+            textScrollView.setBackgroundColor(if (darkMode) Color.parseColor("#121212") else Color.WHITE)
             textView.text = text
             progressBar.isVisible = false
         }
@@ -167,7 +155,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             .enableAntialiasing(true)
             .spacing(8)
             .scrollHandle(DefaultScrollHandle(this@DocumentViewerActivity))
-            .nightMode(false)
+            .nightMode(darkMode)
             .onLoad { _ -> progressBar.isVisible = false }
             .onError { e ->
                 progressBar.isVisible = false
@@ -203,9 +191,10 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun buildContentView(): View {
+        val rootBgColor = if (darkMode) Color.parseColor("#121212") else BG
         val root = FrameLayout(this).apply {
             layoutParams = ViewGroup.LayoutParams(MATCH, MATCH)
-            setBackgroundColor(BG)
+            setBackgroundColor(rootBgColor)
         }
 
         val content = LinearLayout(this).apply {
@@ -237,7 +226,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true
             settings.defaultTextEncodingName = "UTF-8"
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(if (darkMode) Color.parseColor("#121212") else Color.WHITE)
             isVisible = false
 
             webViewClient = object : WebViewClient() {
@@ -257,14 +246,14 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         content.addView(webView)
 
         textView = TextView(this).apply {
-            setTextColor(Color.parseColor("#111111"))
+            setTextColor(if (darkMode) Color.parseColor("#E0E0E0") else Color.parseColor("#111111"))
             setLineSpacing(4f, 1.2f)
             setPadding(20, 20, 20, 20)
             setTextIsSelectable(true)
         }
         textScrollView = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
-            setBackgroundColor(Color.WHITE)
+            setBackgroundColor(if (darkMode) Color.parseColor("#121212") else Color.WHITE)
             isVisible = false
         }
         textScrollView.addView(textView)

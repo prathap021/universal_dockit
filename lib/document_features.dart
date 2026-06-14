@@ -7,6 +7,7 @@ class DocumentFeatures {
   final bool shareDocument;
   final bool fileInformation;
   final bool offlineViewing;
+  final bool darkMode;
 
   // Navigation
   final bool pageNavigation;
@@ -35,6 +36,7 @@ class DocumentFeatures {
     this.shareDocument = true,
     this.fileInformation = true,
     this.offlineViewing = true,
+    this.darkMode = false,
     this.pageNavigation = true,
     this.sheetNavigation = true,
     this.slideNavigation = true,
@@ -59,6 +61,7 @@ class DocumentFeatures {
       'shareDocument': shareDocument,
       'fileInformation': fileInformation,
       'offlineViewing': offlineViewing,
+      'darkMode': darkMode,
       'pageNavigation': pageNavigation,
       'sheetNavigation': sheetNavigation,
       'slideNavigation': slideNavigation,
