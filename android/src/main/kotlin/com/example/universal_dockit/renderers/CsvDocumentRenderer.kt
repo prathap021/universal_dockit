@@ -30,7 +30,7 @@ internal class CsvDocumentRenderer : DocumentRenderer {
     }
 
     private fun buildHtml(filePath: String): String = buildString {
-        append(HtmlTemplates.header("CSV"))
+        append(HtmlTemplates.header("CSV", accentColor = "#217346"))
         append("<div class='table-wrapper'><table>")
         var firstRow = true
         BufferedReader(

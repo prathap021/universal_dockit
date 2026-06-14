@@ -17,7 +17,7 @@ internal class OdsDocumentRenderer : DocumentRenderer {
     override suspend fun render(filePath: String, callbacks: RenderCallbacks) {
         val html = withContext(Dispatchers.IO) {
             buildString {
-                append(HtmlTemplates.header("OpenDocument Spreadsheet"))
+                append(HtmlTemplates.header("OpenDocument Spreadsheet", accentColor = "#217346"))
                 append(OdfContentParser.parse(filePath, docKind = "ods"))
                 append(HtmlTemplates.footer())
             }

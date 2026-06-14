@@ -17,7 +17,7 @@ internal class OdtDocumentRenderer : DocumentRenderer {
     override suspend fun render(filePath: String, callbacks: RenderCallbacks) {
         val html = withContext(Dispatchers.IO) {
             buildString {
-                append(HtmlTemplates.header("OpenDocument Text"))
+                append(HtmlTemplates.header("OpenDocument Text", accentColor = "#2B579A"))
                 append(OdfContentParser.parse(filePath, docKind = "odt"))
                 append(HtmlTemplates.footer())
             }

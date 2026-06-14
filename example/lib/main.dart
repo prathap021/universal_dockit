@@ -465,19 +465,27 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
     switch (extension?.toLowerCase()) {
       case 'pdf':
         iconData = Icons.picture_as_pdf_rounded;
-        color = const Color(0xFFE94560);
+        color = const Color(0xFFE94560); // Red
       case 'doc':
       case 'docx':
+      case 'rtf':
+      case 'odt':
         iconData = Icons.description_rounded;
-        color = const Color(0xFF2196F3);
+        color = const Color(0xFF2196F3); // Blue
       case 'xls':
       case 'xlsx':
+      case 'csv':
+      case 'ods':
         iconData = Icons.table_chart_rounded;
-        color = const Color(0xFF4CAF50);
+        color = const Color(0xFF4CAF50); // Green
       case 'ppt':
       case 'pptx':
+      case 'odp':
         iconData = Icons.slideshow_rounded;
-        color = const Color(0xFFFF9800);
+        color = const Color(0xFFFF9800); // Orange
+      case 'txt':
+        iconData = Icons.text_fields_rounded;
+        color = Colors.grey.shade600; // Gray
       default:
         iconData = Icons.insert_drive_file_rounded;
         color = Colors.grey.shade600;
