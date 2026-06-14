@@ -121,7 +121,38 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         return;
       }
 
-      final success = await _dockit.openDocument(path);
+      final success = await _dockit.openDocument(
+        path,
+        features: const DocumentFeatures(
+          common: CommonFeatures(
+            openLocalFile: true,
+            openFromUrl: true,
+            zoomInOut: true,
+            searchText: true,
+            shareDocument: true,
+            fileInformation: true,
+            offlineViewing: true,
+          ),
+          pdf: PdfFeatures(
+            pageNavigation: true,
+            textSelection: true,
+            search: true,
+            thumbnails: true,
+          ),
+          word: WordFeatures(
+            richTextRendering: true,
+            images: true,
+            tables: true,
+            hyperlinks: true,
+          ),
+          excel: ExcelFeatures(
+            sheetNavigation: true,
+            cellFormatting: true,
+            mergedCells: true,
+            freezePanes: true,
+          ),
+        ),
+      );
 
       setState(() {
         _status = success
@@ -169,6 +200,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
   }
 
   Future<void> _pickAnyDocument() async {
+    
     setState(() {
       _loading = true;
       _status = null;
