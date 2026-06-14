@@ -136,7 +136,7 @@ await _universalDockitPlugin.openDocument(
     shareDocument: true,
     fileInformation: true,
     offlineViewing: true,
-    // Note: Dark Mode is intentionally excluded per user specification
+    darkMode: true, // Enable native dark mode rendering
     
     // The following features will be applied only if the current 
     // document format supports them natively:
