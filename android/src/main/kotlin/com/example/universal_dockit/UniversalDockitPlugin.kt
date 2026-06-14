@@ -39,8 +39,29 @@ class UniversalDockitPlugin :
                     return
                 }
 
-                if (!java.io.File(filePath).exists()) {
-                    result.error("FILE_NOT_FOUND", "File not found: $filePath", null)
+                var resolvedPath = filePath
+                if (resolvedPath.startsWith("file://")) {
+                    resolvedPath = resolvedPath.substring(7)
+                } else if (resolvedPath.startsWith("content://")) {
+                    try {
+                        val uri = android.net.Uri.parse(resolvedPath)
+                        val inputStream = context.contentResolver.openInputStream(uri)
+                        if (inputStream != null) {
+                            val tempFile = java.io.File(context.cacheDir, "temp_doc_${System.currentTimeMillis()}.$docType")
+                            val outputStream = java.io.FileOutputStream(tempFile)
+                            inputStream.copyTo(outputStream)
+                            inputStream.close()
+                            outputStream.close()
+                            resolvedPath = tempFile.absolutePath
+                        }
+                    } catch (e: Exception) {
+                        result.error("URI_RESOLVE_ERROR", "Failed to resolve content URI: ${e.message}", null)
+                        return
+                    }
+                }
+
+                if (!java.io.File(resolvedPath).exists()) {
+                    result.error("FILE_NOT_FOUND", "File not found: $resolvedPath", null)
                     return
                 }
 
@@ -52,7 +73,7 @@ class UniversalDockitPlugin :
 
                 try {
                     val intent = Intent(currentActivity, DocumentViewerActivity::class.java).apply {
-                        putExtra(DocumentViewerActivity.EXTRA_FILE_PATH, filePath)
+                        putExtra(DocumentViewerActivity.EXTRA_FILE_PATH, resolvedPath)
                         putExtra(DocumentViewerActivity.EXTRA_DOC_TYPE, docType)
                         if (features != null) {
                             putExtra("features", HashMap(features))
