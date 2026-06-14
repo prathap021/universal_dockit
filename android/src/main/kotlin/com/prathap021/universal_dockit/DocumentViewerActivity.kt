@@ -68,7 +68,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     private lateinit var progressBar: ProgressBar
     private lateinit var errorView: TextView
-    private lateinit var pdfView: PDFView
+    private var pdfView: PDFView? = null
     private lateinit var webView: WebView
     private lateinit var textScrollView: ScrollView
     private lateinit var textView: TextView
@@ -146,8 +146,17 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     override suspend fun showPdf(file: File) = withContext(Dispatchers.Main) {
         hideContent()
-        pdfView.isVisible = true
-        pdfView.fromFile(file)
+        if (pdfView == null) {
+            val pdf = PDFView(this@DocumentViewerActivity, null).apply {
+                layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
+            }
+            val contentLayout = webView.parent as ViewGroup
+            contentLayout.addView(pdf, 1)
+            pdfView = pdf
+        }
+        val pv = pdfView!!
+        pv.isVisible = true
+        pv.fromFile(file)
             .defaultPage(0)
             .enableSwipe(true)
             .swipeHorizontal(false)
@@ -182,7 +191,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     private fun hideContent() {
         webView.isVisible = false
-        pdfView.isVisible = false
+        pdfView?.isVisible = false
         textScrollView.isVisible = false
         errorView.isVisible = false
     }
@@ -211,12 +220,6 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             isVisible = false
         }
         content.addView(errorView)
-
-        pdfView = PDFView(this, null).apply {
-            layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
-            isVisible = false
-        }
-        content.addView(pdfView)
 
         webView = WebView(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, MATCH)
