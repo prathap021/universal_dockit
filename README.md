@@ -168,6 +168,34 @@ To keep the codebase maintainable and performant, the native code is split using
 
 ---
 
+## 🤝 Contributing and Feedback
+
+We welcome contributions and feedback! Here’s how you can help:
+
+### 🐛 Reporting Bugs
+If you find a bug, please [open an issue](https://github.com/prathap021/universal_dockit/issues) with:
+* A clear description of the problem.
+* Steps to reproduce the issue.
+* The document format (e.g., PDF, DOCX) causing the issue.
+* Your Flutter version and the platform (Android/iOS) where the issue occurs.
+
+### 💡 Requesting Features
+Feature requests are always welcome! If there's a specific document format, UI feature, or performance enhancement you'd like to see:
+* [Open an issue](https://github.com/prathap021/universal_dockit/issues) outlining your feature request.
+* Describe the use case and why it would be helpful.
+
+### 🛠️ Contributing Code
+We love pull requests! If you'd like to contribute directly to the code:
+1. Fork the repository.
+2. Create a new branch for your feature or bugfix (`git checkout -b feature/my-new-feature`).
+3. Commit your changes (`git commit -m 'Add some feature'`).
+4. Push to the branch (`git push origin feature/my-new-feature`).
+5. Open a Pull Request.
+
+Please ensure your code follows standard Flutter linting rules.
+
+---
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
