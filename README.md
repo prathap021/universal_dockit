@@ -123,41 +123,36 @@ Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, 
 
 ### Configuring Document Features
 
-You can configure exactly which features are enabled in the native viewer by passing a `DocumentFeatures` object. The plugin allows fine-grained control over common features (like zoom, search, sharing) as well as format-specific features (like sheet navigation for Excel or thumbnails for PDF).
+You can configure exactly which features are enabled in the native viewer by passing a `DocumentFeatures` object. The plugin uses a single unified configuration—any features that are applicable to the document being opened will be applied automatically, while non-applicable features are safely ignored.
 
 ```dart
 await _universalDockitPlugin.openDocument(
   filePath,
-  features: DocumentFeatures(
-    common: CommonFeatures(
-      openLocalFile: true,
-      openFromUrl: true,
-      zoomInOut: true,
-      searchText: true,
-      shareDocument: true,
-      fileInformation: true,
-      offlineViewing: true,
-      // Note: Dark Mode is intentionally excluded per user specification
-    ),
-    pdf: PdfFeatures(
-      pageNavigation: true,
-      textSelection: true,
-      search: true,
-      thumbnails: true,
-    ),
-    word: WordFeatures(
-      richTextRendering: true,
-      images: true,
-      tables: true,
-      hyperlinks: true,
-    ),
-    excel: ExcelFeatures(
-      sheetNavigation: true,
-      cellFormatting: true,
-      mergedCells: true,
-      freezePanes: true,
-    ),
-    // ... configure features for Ppt, Txt, Csv, Html, Odt as needed.
+  features: const DocumentFeatures(
+    openLocalFile: true,
+    openFromUrl: true,
+    zoomInOut: true,
+    search: true,
+    shareDocument: true,
+    fileInformation: true,
+    offlineViewing: true,
+    // Note: Dark Mode is intentionally excluded per user specification
+    
+    // The following features will be applied only if the current 
+    // document format supports them natively:
+    pageNavigation: true,
+    sheetNavigation: true,
+    slideNavigation: true,
+    thumbnails: true,
+    textSelection: true,
+    richTextRendering: true,
+    renderImages: true,
+    renderTables: true,
+    renderHyperlinks: true,
+    cellFormatting: true,
+    freezePanes: true,
+    wordWrap: true,
+    cssSupport: true,
   ),
 );
 ```
