@@ -32,6 +32,7 @@ class UniversalDockitPlugin :
             "openDocument" -> {
                 val filePath = call.argument<String>("filePath")
                 val docType = call.argument<String>("docType")
+                val features = call.argument<Map<String, Any>>("features")
 
                 if (filePath == null || docType == null) {
                     result.error("INVALID_ARGS", "filePath and docType are required", null)
@@ -53,6 +54,9 @@ class UniversalDockitPlugin :
                     val intent = Intent(currentActivity, DocumentViewerActivity::class.java).apply {
                         putExtra(DocumentViewerActivity.EXTRA_FILE_PATH, filePath)
                         putExtra(DocumentViewerActivity.EXTRA_DOC_TYPE, docType)
+                        if (features != null) {
+                            putExtra("features", HashMap(features))
+                        }
                     }
                     currentActivity.startActivity(intent)
                     result.success(true)

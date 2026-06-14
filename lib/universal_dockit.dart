@@ -1,7 +1,9 @@
 import 'doc_type.dart';
+import 'document_features.dart';
 import 'universal_dockit_platform_interface.dart';
 
 export 'doc_type.dart';
+export 'document_features.dart';
 
 /// UniversalDockit — public API for the native document viewer plugin.
 ///
@@ -28,11 +30,16 @@ class UniversalDockit {
   /// is not supplied.
   ///
   /// Returns `true` when the native viewer was launched successfully.
-  Future<bool> openDocument(String filePath, {DocType? docType}) {
+  Future<bool> openDocument(
+    String filePath, {
+    DocType? docType,
+    DocumentFeatures features = const DocumentFeatures(),
+  }) {
     final resolvedType = docType ?? DocType.fromPath(filePath);
     return UniversalDockitPlatform.instance.openDocument(
       filePath: filePath,
       docType: resolvedType,
+      features: features,
     );
   }
 

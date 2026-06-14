@@ -1,6 +1,7 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'doc_type.dart';
+import 'document_features.dart';
 import 'universal_dockit_method_channel.dart';
 
 /// Abstract platform interface for UniversalDockit.
@@ -35,6 +36,7 @@ abstract class UniversalDockitPlatform extends PlatformInterface {
   Future<bool> openDocument({
     required String filePath,
     required DocType docType,
+    DocumentFeatures features = const DocumentFeatures(),
   }) {
     throw UnimplementedError('openDocument() has not been implemented.');
   }

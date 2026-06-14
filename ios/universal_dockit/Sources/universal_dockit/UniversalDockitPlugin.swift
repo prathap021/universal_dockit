@@ -47,7 +47,8 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
                 ))
                 return
             }
-            openDocument(filePath: filePath, docType: docType, result: result)
+            let features = args["features"] as? [String: Any] ?? [:]
+            openDocument(filePath: filePath, docType: docType, features: features, result: result)
 
         case "getPlatformVersion":
             result("iOS \(UIDevice.current.systemVersion)")
@@ -62,6 +63,7 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
     private func openDocument(
         filePath: String,
         docType: String,
+        features: [String: Any],
         result: @escaping FlutterResult
     ) {
         let url = URL(fileURLWithPath: filePath)

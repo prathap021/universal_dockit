@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import 'doc_type.dart';
+import 'document_features.dart';
 import 'universal_dockit_platform_interface.dart';
 
 /// Method-channel implementation of [UniversalDockitPlatform].
@@ -18,12 +19,14 @@ class MethodChannelUniversalDockit extends UniversalDockitPlatform {
   Future<bool> openDocument({
     required String filePath,
     required DocType docType,
+    DocumentFeatures features = const DocumentFeatures(),
   }) async {
     final result = await methodChannel.invokeMethod<bool>(
       'openDocument',
-      <String, String>{
+      <String, dynamic>{
         'filePath': filePath,
         'docType': docType.identifier,
+        'features': features.toMap(),
       },
     );
     return result ?? false;

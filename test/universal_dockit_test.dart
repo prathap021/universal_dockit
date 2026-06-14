@@ -19,6 +19,7 @@ class MockUniversalDockitPlatform
   Future<bool> openDocument({
     required String filePath,
     required DocType docType,
+    DocumentFeatures? features,
   }) async {
     lastOpenedFilePath = filePath;
     lastOpenedDocType = docType;

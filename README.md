@@ -118,6 +118,47 @@ await _universalDockitPlugin.openDocument(
 
 Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `epub`, `cbz`, `txt`, `csv`, `rtf`, `odt`, `ods`, `odp`.
 
+### Configuring Document Features
+
+You can configure exactly which features are enabled in the native viewer by passing a `DocumentFeatures` object. The plugin allows fine-grained control over common features (like zoom, search, sharing) as well as format-specific features (like sheet navigation for Excel or thumbnails for PDF).
+
+```dart
+await _universalDockitPlugin.openDocument(
+  filePath,
+  features: DocumentFeatures(
+    common: CommonFeatures(
+      openLocalFile: true,
+      openFromUrl: true,
+      zoomInOut: true,
+      searchText: true,
+      shareDocument: true,
+      fileInformation: true,
+      offlineViewing: true,
+      // Note: Dark Mode is intentionally excluded per user specification
+    ),
+    pdf: PdfFeatures(
+      pageNavigation: true,
+      textSelection: true,
+      search: true,
+      thumbnails: true,
+    ),
+    word: WordFeatures(
+      richTextRendering: true,
+      images: true,
+      tables: true,
+      hyperlinks: true,
+    ),
+    excel: ExcelFeatures(
+      sheetNavigation: true,
+      cellFormatting: true,
+      mergedCells: true,
+      freezePanes: true,
+    ),
+    // ... configure features for Ppt, Txt, Csv, Html, Odt as needed.
+  ),
+);
+```
+
 ---
 
 ## 🏗 Architecture Under the Hood

@@ -1,44 +1,17 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:universal_dockit/universal_dockit.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  runApp(UniversalDockitExampleApp(prefs: prefs));
+void main() {
+  runApp(const UniversalDockitExampleApp());
 }
 
-class UniversalDockitExampleApp extends StatefulWidget {
-  final SharedPreferences prefs;
-  const UniversalDockitExampleApp({super.key, required this.prefs});
-
-  @override
-  State<UniversalDockitExampleApp> createState() => _AppState();
-}
-
-class _AppState extends State<UniversalDockitExampleApp> {
-  bool _isDarkMode = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _isDarkMode = widget.prefs.getBool('darkMode') ?? false;
-  }
-
-  void toggleTheme() {
-    setState(() {
-      _isDarkMode = !_isDarkMode;
-      widget.prefs.setBool('darkMode', _isDarkMode);
-    });
-  }
+class UniversalDockitExampleApp extends StatelessWidget {
+  const UniversalDockitExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -46,327 +19,528 @@ class _AppState extends State<UniversalDockitExampleApp> {
       title: 'Universal Dockit',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.light,
-        scaffoldBackgroundColor: Colors.grey.shade50,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1), brightness: Brightness.light),
+        scaffoldBackgroundColor: Colors.white,
+        fontFamily: 'Poppins',
+        colorScheme: const ColorScheme.light(
+          primary: Color(0xFF6366F1),
+          secondary: Color(0xFF8B5CF6),
+          surface: Colors.white,
+        ),
       ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF111827),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5CF6), brightness: Brightness.dark),
-      ),
-      themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: DocumentDashboard(
-        prefs: widget.prefs,
-        toggleTheme: toggleTheme,
-        isDarkMode: _isDarkMode,
-      ),
+      home: const DocumentPickerScreen(),
     );
   }
 }
 
-class DocumentRecord {
-  final String path;
-  final String name;
-  final int size;
-  final DateTime accessedAt;
-  bool isFavorite;
-
-  DocumentRecord({
-    required this.path,
-    required this.name,
-    required this.size,
-    required this.accessedAt,
-    this.isFavorite = false,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'path': path,
-        'name': name,
-        'size': size,
-        'accessedAt': accessedAt.toIso8601String(),
-        'isFavorite': isFavorite,
-      };
-
-  factory DocumentRecord.fromJson(Map<String, dynamic> json) => DocumentRecord(
-        path: json['path'],
-        name: json['name'],
-        size: json['size'],
-        accessedAt: DateTime.parse(json['accessedAt']),
-        isFavorite: json['isFavorite'] ?? false,
-      );
-}
-
-class DocumentDashboard extends StatefulWidget {
-  final SharedPreferences prefs;
-  final VoidCallback toggleTheme;
-  final bool isDarkMode;
-
-  const DocumentDashboard({
-    super.key,
-    required this.prefs,
-    required this.toggleTheme,
-    required this.isDarkMode,
-  });
+class DocumentPickerScreen extends StatefulWidget {
+  const DocumentPickerScreen({super.key});
 
   @override
-  State<DocumentDashboard> createState() => _DashboardState();
+  State<DocumentPickerScreen> createState() => _DocumentPickerScreenState();
 }
 
-class _DashboardState extends State<DocumentDashboard> {
+class _DocumentPickerScreenState extends State<DocumentPickerScreen>
+    with SingleTickerProviderStateMixin {
   final _dockit = UniversalDockit();
-  List<DocumentRecord> _documents = [];
-  bool _isLoading = false;
+  String? _status;
+  bool _loading = false;
+  PlatformFile? _pickedFile;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  static const _quickFormats = [
+    ('PDF', 'pdf', Icons.picture_as_pdf),
+    ('DOC', 'doc', Icons.description),
+    ('DOCX', 'docx', Icons.description),
+    ('XLS', 'xls', Icons.table_chart),
+    ('XLSX', 'xlsx', Icons.table_chart),
+    ('PPT', 'ppt', Icons.slideshow),
+    ('PPTX', 'pptx', Icons.slideshow),
+    ('TXT', 'txt', Icons.text_fields),
+    ('CSV', 'csv', Icons.grid_on),
+    ('RTF', 'rtf', Icons.note),
+    ('ODT', 'odt', Icons.edit_document),
+    ('ODS', 'ods', Icons.table_rows),
+    ('ODP', 'odp', Icons.slideshow),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadDocuments();
-    // Enable full screen mode
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    );
+    _animationController.forward();
   }
 
-  void _loadDocuments() {
-    final docsJson = widget.prefs.getStringList('documents') ?? [];
-    setState(() {
-      _documents = docsJson.map((e) => DocumentRecord.fromJson(jsonDecode(e))).toList();
-      _documents.sort((a, b) => b.accessedAt.compareTo(a.accessedAt));
-    });
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
-  void _saveDocuments() {
-    final docsJson = _documents.map((e) => jsonEncode(e.toJson())).toList();
-    widget.prefs.setStringList('documents', docsJson);
-  }
-
-  void _addOrUpdateDocument(String path, String name, int size) {
-    final existingIdx = _documents.indexWhere((d) => d.path == path);
-    if (existingIdx != -1) {
-      final doc = _documents.removeAt(existingIdx);
-      _documents.insert(
-          0,
-          DocumentRecord(
-            path: doc.path,
-            name: doc.name,
-            size: doc.size,
-            accessedAt: DateTime.now(),
-            isFavorite: doc.isFavorite,
-          ));
-    } else {
-      _documents.insert(
-          0,
-          DocumentRecord(
-            path: path,
-            name: name,
-            size: size,
-            accessedAt: DateTime.now(),
-          ));
+  Future<String?> _resolveFilePath(PlatformFile file) async {
+    final path = file.path;
+    if (path != null && File(path).existsSync()) {
+      return path;
     }
-    _saveDocuments();
-    setState(() {});
+
+    final bytes = file.bytes;
+    if (bytes == null) {
+      return null;
+    }
+
+    final dir = await getTemporaryDirectory();
+    final ext = file.extension ?? 'bin';
+    final name = file.name.isNotEmpty ? file.name : 'document.$ext';
+    final dest = File('${dir.path}/$name');
+    await dest.writeAsBytes(bytes, flush: true);
+    return dest.path;
   }
 
-  void _toggleFavorite(DocumentRecord doc) {
+  Future<void> _openFile(PlatformFile file) async {
     setState(() {
-      doc.isFavorite = !doc.isFavorite;
+      _loading = true;
+      _status = null;
+      _pickedFile = file;
     });
-    _saveDocuments();
-  }
 
-  Future<void> _openDocument(String path, String name, int size) async {
-    setState(() => _isLoading = true);
     try {
-      if (!File(path).existsSync()) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File not found! It may have been deleted.')));
-        _documents.removeWhere((d) => d.path == path);
-        _saveDocuments();
+      final path = await _resolveFilePath(file);
+      if (path == null) {
+        setState(() {
+          _status = 'Could not access file. Try again or use a local file copy.';
+        });
         return;
       }
-      _addOrUpdateDocument(path, name, size);
-      await _dockit.openDocument(path);
+
+      final success = await _dockit.openDocument(path);
+
+      setState(() {
+        _status = success
+            ? 'Successfully opened ${file.name}'
+            : 'Failed to open document';
+      });
+    } on ArgumentError catch (e) {
+      setState(() => _status = 'Error: ${e.message}');
+    } on PlatformException catch (e) {
+      setState(() => _status = 'Error: ${e.message ?? e.code}');
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      setState(() => _status = 'Error: $e');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
-  Future<void> _pickFromLocal() async {
-    setState(() => _isLoading = true);
+  Future<void> _pickFormat(String extension) async {
+    setState(() {
+      _loading = true;
+      _status = null;
+      _pickedFile = null;
+    });
+
     try {
-      final result = await FilePicker.platform.pickFiles(withData: false);
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-        if (file.path != null) {
-          await _openDocument(file.path!, file.name, file.size);
-        }
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [extension],
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        setState(() => _loading = false);
+        return;
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+
+      await _openFile(result.files.first);
+    } catch (e) {
+      setState(() => _status = 'Error: $e');
+      setState(() => _loading = false);
     }
   }
 
-  Future<void> _openFromUrl() async {
-    final urlController = TextEditingController();
-    final url = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Open from URL'),
-        content: TextField(
-          controller: urlController,
-          decoration: const InputDecoration(hintText: 'https://example.com/document.pdf'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, urlController.text), child: const Text('Download')),
-        ],
-      ),
-    );
+  Future<void> _pickAnyDocument() async {
+    setState(() {
+      _loading = true;
+      _status = null;
+      _pickedFile = null;
+    });
 
-    if (url != null && url.isNotEmpty) {
-      setState(() => _isLoading = true);
-      try {
-        final response = await http.get(Uri.parse(url));
-        if (response.statusCode == 200) {
-          final dir = await getTemporaryDirectory();
-          final uri = Uri.parse(url);
-          final filename = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'downloaded_file.pdf';
-          final file = File('${dir.path}/$filename');
-          await file.writeAsBytes(response.bodyBytes);
-          await _openDocument(file.path, filename, file.lengthSync());
-        } else {
-          throw Exception('Failed to download: HTTP ${response.statusCode}');
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error downloading: $e')));
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: _quickFormats.map((e) => e.$2).toList(),
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        setState(() => _loading = false);
+        return;
       }
+
+      await _openFile(result.files.first);
+    } catch (e) {
+      setState(() => _status = 'Error: $e');
+      setState(() => _loading = false);
     }
-  }
-
-  void _showFileInfo(DocumentRecord doc) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('File Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name: ${doc.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text('Size: ${(doc.size / 1024).toStringAsFixed(2)} KB'),
-            const SizedBox(height: 8),
-            Text('Last Opened: ${doc.accessedAt.toString().split('.')[0]}'),
-            const SizedBox(height: 8),
-            Text('Path: ${doc.path}', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Share.shareXFiles([XFile(doc.path)], text: 'Check out this document: ${doc.name}');
-              },
-              child: const Text('Share')),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDocTile(DocumentRecord doc) {
-    final ext = doc.name.split('.').last.toLowerCase();
-    return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer, borderRadius: BorderRadius.circular(8)),
-        child: Text(ext.toUpperCase(), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
-      ),
-      title: Text(doc.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('${(doc.size / 1024).toStringAsFixed(1)} KB • ${doc.accessedAt.day}/${doc.accessedAt.month}/${doc.accessedAt.year}'),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: Icon(doc.isFavorite ? Icons.star : Icons.star_border, color: doc.isFavorite ? Colors.amber : Colors.grey),
-            onPressed: () => _toggleFavorite(doc),
-          ),
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: () => _showFileInfo(doc),
-          ),
-        ],
-      ),
-      onTap: () => _openDocument(doc.path, doc.name, doc.size),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final favorites = _documents.where((d) => d.isFavorite).toList();
-    
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Universal Opener', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            onPressed: widget.toggleTheme,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Universal Dockit',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            color: Color(0xFF1F2937),
           ),
-        ],
+        ),
+        centerTitle: true,
       ),
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                      icon: const Icon(Icons.folder),
-                      label: const Text('Local Storage'),
-                      onPressed: _pickFromLocal,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-                      icon: const Icon(Icons.link),
-                      label: const Text('Open URL'),
-                      onPressed: _openFromUrl,
-                    ),
-                  ),
-                ],
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                child: Column(
+                  children: [
+                    _buildHeroIcon(),
+                    const SizedBox(height: 32),
+                    if (_status != null) ...[
+                      _buildStatusCard(),
+                      const SizedBox(height: 16),
+                    ],
+                    if (_pickedFile != null) ...[
+                      _buildSelectedFileCard(),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildQuickFormatGrid(),
+                    const SizedBox(height: 24),
+                    _buildActionButton(),
+                  ],
+                ),
               ),
-              const SizedBox(height: 24),
-              if (favorites.isNotEmpty) ...[
-                const Text('Favorites', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                ...favorites.map(_buildDocTile),
-                const Divider(height: 32),
-              ],
-              const Text('Recent Files', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              if (_documents.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(32.0),
-                  child: Center(child: Text('No recent documents', style: TextStyle(color: Colors.grey))),
-                )
-              else
-                ..._documents.take(10).map(_buildDocTile),
+            ),
+          ),
+          if (_loading) _buildLoadingOverlay(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: Colors.black.withValues(alpha: 0.3),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
             ],
           ),
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: const Center(child: CircularProgressIndicator()),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                height: 44,
+                width: 44,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3.5,
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Opening document...',
+                style: TextStyle(
+                  color: Colors.grey.shade700,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickFormatGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick open by format',
+          style: TextStyle(
+            color: Colors.grey.shade600,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _quickFormats.map((entry) {
+            final label = entry.$1;
+            final ext = entry.$2;
+            final icon = entry.$3;
+            return FilterChip(
+              label: Text(label),
+              selected: false,
+              onSelected: _loading ? null : (_) => _pickFormat(ext),
+              avatar: Icon(icon, size: 18, color: const Color(0xFF6366F1)),
+              backgroundColor: Colors.grey.shade50,
+              selectedColor: const Color(0xFF6366F1).withValues(alpha: 0.1),
+              labelStyle: TextStyle(
+                color: Colors.grey.shade700,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+              side: BorderSide(color: Colors.grey.shade200),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroIcon() {
+    return TweenAnimationBuilder(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 1000),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: value,
+          child: Container(
+            height: 100,
+            width: 100,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+                  blurRadius: 30,
+                  spreadRadius: 5,
+                ),
+              ],
             ),
+            child: const Icon(
+              Icons.description_rounded,
+              size: 50,
+              color: Colors.white,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusCard() {
+    final isSuccess = _status!.startsWith('Successfully');
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSuccess ? Colors.green.shade200 : Colors.red.shade200,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
+            color: isSuccess ? Colors.green.shade700 : Colors.red.shade700,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _status!,
+              style: TextStyle(
+                color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedFileCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          _getFileIcon(_pickedFile!.extension),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _pickedFile!.name,
+                  style: const TextStyle(
+                    color: Color(0xFF1F2937),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${_pickedFile!.extension?.toUpperCase() ?? 'UNKNOWN'} • '
+                  '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.check_circle,
+              color: Colors.green.shade600,
+              size: 20,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getFileIcon(String? extension) {
+    IconData iconData;
+    Color color;
+
+    switch (extension?.toLowerCase()) {
+      case 'pdf':
+        iconData = Icons.picture_as_pdf_rounded;
+        color = const Color(0xFFE94560); // Red
+      case 'doc':
+      case 'docx':
+      case 'rtf':
+      case 'odt':
+        iconData = Icons.description_rounded;
+        color = const Color(0xFF2196F3); // Blue
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+      case 'ods':
+        iconData = Icons.table_chart_rounded;
+        color = const Color(0xFF4CAF50); // Green
+      case 'ppt':
+      case 'pptx':
+      case 'odp':
+        iconData = Icons.slideshow_rounded;
+        color = const Color(0xFFFF9800); // Orange
+      case 'txt':
+        iconData = Icons.text_fields_rounded;
+        color = Colors.grey.shade600; // Gray
+      default:
+        iconData = Icons.insert_drive_file_rounded;
+        color = Colors.grey.shade600;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(iconData, color: color, size: 28),
+    );
+  }
+
+  Widget _buildActionButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _loading ? null : _pickAnyDocument,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.folder_open_rounded, color: Colors.white, size: 24),
+                SizedBox(width: 12),
+                Text(
+                  'Browse All Documents',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
