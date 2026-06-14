@@ -1,4 +1,4 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
 import android.annotation.SuppressLint
 import android.graphics.Color
@@ -18,17 +18,17 @@ import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
-import com.example.universal_dockit.renderers.CsvDocumentRenderer
-import com.example.universal_dockit.renderers.DocumentRenderer
-import com.example.universal_dockit.renderers.ExcelDocumentRenderer
-import com.example.universal_dockit.renderers.OdpDocumentRenderer
-import com.example.universal_dockit.renderers.OdsDocumentRenderer
-import com.example.universal_dockit.renderers.OdtDocumentRenderer
-import com.example.universal_dockit.renderers.PdfDocumentRenderer
-import com.example.universal_dockit.renderers.PowerPointDocumentRenderer
-import com.example.universal_dockit.renderers.RtfDocumentRenderer
-import com.example.universal_dockit.renderers.TxtDocumentRenderer
-import com.example.universal_dockit.renderers.WordDocumentRenderer
+import com.prathap021.universal_dockit.renderers.CsvDocumentRenderer
+import com.prathap021.universal_dockit.renderers.DocumentRenderer
+import com.prathap021.universal_dockit.renderers.ExcelDocumentRenderer
+import com.prathap021.universal_dockit.renderers.OdpDocumentRenderer
+import com.prathap021.universal_dockit.renderers.OdsDocumentRenderer
+import com.prathap021.universal_dockit.renderers.OdtDocumentRenderer
+import com.prathap021.universal_dockit.renderers.PdfDocumentRenderer
+import com.prathap021.universal_dockit.renderers.PowerPointDocumentRenderer
+import com.prathap021.universal_dockit.renderers.RtfDocumentRenderer
+import com.prathap021.universal_dockit.renderers.TxtDocumentRenderer
+import com.prathap021.universal_dockit.renderers.WordDocumentRenderer
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import kotlinx.coroutines.Dispatchers

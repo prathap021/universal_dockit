@@ -1,4 +1,4 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
 import android.content.Context
 import android.util.DisplayMetrics

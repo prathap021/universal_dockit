@@ -1,8 +1,8 @@
-package com.example.universal_dockit.renderers
+package com.prathap021.universal_dockit.renderers
 
 import android.os.Build
 import android.text.Html
-import com.example.universal_dockit.RenderCallbacks
+import com.prathap021.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

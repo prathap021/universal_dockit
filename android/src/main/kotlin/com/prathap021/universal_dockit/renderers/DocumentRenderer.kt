@@ -1,6 +1,6 @@
-package com.example.universal_dockit.renderers
+package com.prathap021.universal_dockit.renderers
 
-import com.example.universal_dockit.RenderCallbacks
+import com.prathap021.universal_dockit.RenderCallbacks
 
 /**
  * DocumentRenderer — base interface for all format-specific renderers.

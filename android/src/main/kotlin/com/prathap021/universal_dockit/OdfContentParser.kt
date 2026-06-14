@@ -1,6 +1,6 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
-import com.example.universal_dockit.HtmlTemplates.esc
+import com.prathap021.universal_dockit.HtmlTemplates.esc
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.File

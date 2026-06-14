@@ -1,8 +1,8 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.universal_dockit.renderers.*
+import com.prathap021.universal_dockit.renderers.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

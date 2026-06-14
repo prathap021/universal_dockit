@@ -1,4 +1,4 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
 /**
  * HtmlTemplates — shared HTML page template used by all WebView-based renderers.

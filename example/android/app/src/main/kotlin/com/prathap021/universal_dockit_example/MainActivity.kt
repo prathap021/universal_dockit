@@ -1,4 +1,4 @@
-package com.example.universal_dockit_example
+package com.prathap021.universal_dockit_example
 
 import io.flutter.embedding.android.FlutterActivity
 

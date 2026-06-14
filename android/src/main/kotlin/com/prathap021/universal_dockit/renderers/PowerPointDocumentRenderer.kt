@@ -1,7 +1,7 @@
-package com.example.universal_dockit.renderers
+package com.prathap021.universal_dockit.renderers
 
-import com.example.universal_dockit.HtmlTemplates
-import com.example.universal_dockit.RenderCallbacks
+import com.prathap021.universal_dockit.HtmlTemplates
+import com.prathap021.universal_dockit.RenderCallbacks
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.hslf.usermodel.HSLFSlideShow

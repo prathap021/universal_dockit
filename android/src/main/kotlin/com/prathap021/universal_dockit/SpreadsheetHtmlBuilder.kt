@@ -1,6 +1,6 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
-import com.example.universal_dockit.HtmlTemplates.esc
+import com.prathap021.universal_dockit.HtmlTemplates.esc
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.xssf.usermodel.XSSFWorkbook

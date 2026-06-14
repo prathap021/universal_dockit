@@ -1,6 +1,6 @@
-package com.example.universal_dockit.renderers
+package com.prathap021.universal_dockit.renderers
 
-import com.example.universal_dockit.HtmlTemplates.esc
+import com.prathap021.universal_dockit.HtmlTemplates.esc
 import org.apache.poi.sl.usermodel.GroupShape
 import org.apache.poi.sl.usermodel.Shape
 import org.apache.poi.sl.usermodel.TableShape

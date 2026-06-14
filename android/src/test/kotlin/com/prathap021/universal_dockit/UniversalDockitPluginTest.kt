@@ -1,4 +1,4 @@
-package com.example.universal_dockit
+package com.prathap021.universal_dockit
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel

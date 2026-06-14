@@ -1,4 +1,4 @@
-group = "com.example.universal_dockit"
+group = "com.prathap021.universal_dockit"
 version = "1.0-SNAPSHOT"
 
 buildscript {
@@ -28,7 +28,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.universal_dockit"
+    namespace = "com.prathap021.universal_dockit"
     compileSdk = 36
 
     compileOptions {
