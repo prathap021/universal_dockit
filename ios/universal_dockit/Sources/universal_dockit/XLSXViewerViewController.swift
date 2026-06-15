@@ -105,7 +105,9 @@ final class XLSXViewerViewController: UIViewController {
 
     private func buildHTML() throws -> String {
         // Open the XLSX file with CoreXLSX
-        let xlsxFile = try XLSXFile(filepath: fileURL.path)
+        guard let xlsxFile = XLSXFile(filepath: fileURL.path) else {
+            throw NSError(domain: "XLSXViewer", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to open XLSX file"])
+        }
 
         // Fetch shared strings (text stored in a shared pool for de-duplication)
         let sharedStrings = try xlsxFile.parseSharedStrings()
@@ -145,7 +147,8 @@ final class XLSXViewerViewController: UIViewController {
 
     /// Resolves a cell's display value from its type and shared strings table.
     private func cellValue(cell: Cell, sharedStrings: SharedStrings?) -> String {
-        switch cell.type {
+        guard let type = cell.type else { return cell.value ?? "" }
+        switch type {
         case .sharedString:
             // Value is an index into the shared strings table
             if let indexStr = cell.value,
@@ -155,10 +158,10 @@ final class XLSXViewerViewController: UIViewController {
             }
             return cell.value ?? ""
 
-        case .inlineString:
+        case .inlineStr:
             return cell.inlineString?.text ?? cell.value ?? ""
 
-        case .boolean:
+        case .bool:
             return cell.value == "1" ? "TRUE" : "FALSE"
 
         default:

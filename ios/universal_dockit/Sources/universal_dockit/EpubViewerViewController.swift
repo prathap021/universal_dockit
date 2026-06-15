@@ -102,7 +102,7 @@ public class EpubViewerViewController: UIViewController {
                         if let href = manifest[id] {
                             let chapterURL = opfDir.appendingPathComponent(href)
                             if let chapterData = try? String(contentsOf: chapterURL) {
-                                if let bodyRange = chapterData.range(of: "<body[^>]*>(.*?)</body>", options: [.regularExpression, .caseInsensitive, .dotMatchesLineSeparators]) {
+                                if let bodyRange = chapterData.range(of: "(?s)<body[^>]*>(.*?)</body>", options: [.regularExpression, .caseInsensitive]) {
                                     let bodyRaw = String(chapterData[bodyRange])
                                     let strippedStart = bodyRaw.replacingOccurrences(of: "<body[^>]*>", with: "", options: .regularExpression)
                                     let strippedEnd = strippedStart.replacingOccurrences(of: "</body>", with: "", options: .caseInsensitive)
