@@ -148,6 +148,16 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
                 return
             }
 
+            if let qlVC = viewController as? QuickLookViewerViewController {
+                qlVC.modalPresentationStyle = .fullScreen
+                if let isDark = features["darkMode"] as? Bool, isDark {
+                    qlVC.overrideUserInterfaceStyle = .dark
+                }
+                rootVC.present(qlVC, animated: true)
+                result(true)
+                return
+            }
+
             let nav = UINavigationController(rootViewController: viewController)
             nav.modalPresentationStyle = .fullScreen
             

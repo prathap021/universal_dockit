@@ -177,7 +177,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         type: FileType.custom,
         allowedExtensions: [extension],
         allowMultiple: false,
-        withData: true,
+        withData: false,
       );
 
       if (result == null || result.files.isEmpty) {
@@ -205,7 +205,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen>
         type: FileType.custom,
         allowedExtensions: _quickFormats.map((e) => e.$2).toList(),
         allowMultiple: false,
-        withData: true,
+        withData: false,
       );
 
       if (result == null || result.files.isEmpty) {
