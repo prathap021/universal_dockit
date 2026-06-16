@@ -32,7 +32,7 @@ if [[ ! -f "$APK" ]]; then
 fi
 
 echo "Extracting LibreOffice runtime from: $APK"
-unzip -q "$APK" -d "$TMP_DIR"
+unzip -oq "$APK" -d "$TMP_DIR"
 
 mkdir -p "$RUNTIME_DIR/jniLibs" "$RUNTIME_DIR/assets"
 
