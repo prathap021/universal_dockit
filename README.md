@@ -32,9 +32,9 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
-| **Word (doc, docx)** | `.doc`, `.docx` | [All Documents Reader SDK](https://github.com/ahmadullahpk/all-documents-reader) | **QuickLook** (Built-in) |
-| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [All Documents Reader SDK](https://github.com/ahmadullahpk/all-documents-reader) | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
-| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [All Documents Reader SDK](https://github.com/ahmadullahpk/all-documents-reader) | **QuickLook** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | Native ZIP/XML Parser → HTML → WebView | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | Native ZIP/XML Parser → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | Native ZIP/XML Parser → HTML → WebView | **QuickLook** (Built-in) |
 | **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
 | **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
@@ -54,7 +54,7 @@ Add `universal_dockit` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  universal_dockit: ^1.0.1
+  universal_dockit:
 ```
 
 ### 🤖 Android Setup
@@ -144,7 +144,7 @@ await _universalDockitPlugin.openDocument(
 
 To keep the codebase maintainable and performant, the native code is split using the Strategy Pattern:
 
-* **Android**: `UniversalDockitPlugin` handles dispatching. Office documents (Word, Excel, PPT) are routed to the specialized `All_Document_Reader_Activity` from the SDK. Other formats use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific consolidated implementations of `DocumentRenderer` (e.g., `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface.
+* **Android**: `UniversalDockitPlugin` handles dispatching. All documents use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific consolidated implementations of `DocumentRenderer` (e.g., `WordDocumentRenderer`, `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface. Office files (.docx, .xlsx, .pptx) are parsed completely natively using a lightweight ZIP/XML parser engine, removing the need for heavy external activities.
 * **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `EpubViewerViewController`).
 
 ---
@@ -160,10 +160,6 @@ If you find a bug, please [open an issue](https://github.com/prathap021/universa
 * The document format (e.g., PDF, DOCX) causing the issue.
 * Your Flutter version and the platform (Android/iOS) where the issue occurs.
 
-### 💡 Requesting Features
-Feature requests are always welcome! If there's a specific document format, UI feature, or performance enhancement you'd like to see:
-* [Open an issue](https://github.com/prathap021/universal_dockit/issues) outlining your feature request.
-* Describe the use case and why it would be helpful.
 
 ### 🛠️ Contributing Code
 We love pull requests! If you'd like to contribute directly to the code:
@@ -183,6 +179,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 *Open-source libraries used internally:*
 * *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
-* *[All Documents Reader](https://github.com/ahmadullahpk/all-documents-reader)*
+* *Native Office Parsers inspired by [Feathur](https://github.com/sarthakchakraborty12/feathur)*
 * *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
 * *[ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)*

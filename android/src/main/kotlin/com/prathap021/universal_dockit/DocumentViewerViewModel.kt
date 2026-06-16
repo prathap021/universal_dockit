@@ -18,10 +18,9 @@ class DocumentViewerViewModel : ViewModel() {
             "odt" -> OdtDocumentRenderer()
             "ods" -> OdsDocumentRenderer()
             "odp" -> OdpDocumentRenderer()
-            "docx", "doc", "xlsx", "xls", "pptx", "ppt" -> {
-                callbacks.showError("Office documents should be opened via All_Document_Reader_Activity")
-                return
-            }
+            "docx", "doc" -> WordDocumentRenderer()
+            "xlsx", "xls" -> ExcelDocumentRenderer()
+            "pptx", "ppt" -> PowerPointDocumentRenderer()
             else -> {
                 callbacks.showError("Unsupported document type: $docType")
                 return

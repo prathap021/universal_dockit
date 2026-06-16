@@ -112,12 +112,7 @@ dependencies {
     // barteksc artifact is unavailable on JitPack; mhiew fork is published on Maven Central
     implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 
-    // -------------------------------------------------------------------------
-    // All Documents Reader
-    // https://github.com/ahmadullahpk/all-documents-reader
-    implementation("com.github.ahmadullahpk:all-documents-reader:1.0.7") {
-        exclude(group = "com.github.barteksc", module = "android-pdf-viewer")
-    }
+    // Removed all-documents-reader dependency, now parsing natively
 
     // -------------------------------------------------------------------------
     // OpenDocument (.odt/.ods/.odp) is parsed in-house via ZIP + XmlPullParser
