@@ -88,7 +88,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         val features = intent.getSerializableExtra("features") as? HashMap<String, Any>
         darkMode = features?.get("darkMode") as? Boolean ?: false
         enableSearchFeature = features?.get("search") as? Boolean ?: false
-        enableZoomFeature = features?.get("zoom") as? Boolean ?: false
+        enableZoomFeature = features?.get("zoomInOut") as? Boolean ?: false
         enableDarkModeToggleFeature = features?.get("darkModeToggle") as? Boolean ?: false
 
         setContentView(buildContentView())
@@ -389,6 +389,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(MATCH, MATCH)
             settings.javaScriptEnabled = false
+            settings.setSupportZoom(true)
             settings.builtInZoomControls = true
             settings.displayZoomControls = false
             settings.useWideViewPort = true

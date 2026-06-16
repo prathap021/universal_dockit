@@ -37,6 +37,9 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen> {
   final _dockit = UniversalDockit();
   String? _status;
   bool _loading = false;
+  bool _enableSearch = true;
+  bool _enableZoom = true;
+  bool _startInDarkMode = false;
 
   Future<String?> _resolveFilePath(PlatformFile file) async {
     final path = file.path;
@@ -68,13 +71,13 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen> {
         return;
       }
 
-      // Only 3 features enabled as requested
+      // Current Android viewer flow: only method-channel enabled features appear.
       final success = await _dockit.openDocument(
         path,
-        features: const DocumentFeatures(
-          search: true,
-          zoomInOut: true,
-          darkMode: false,        // Dark mode support
+        features: DocumentFeatures(
+          search: _enableSearch,
+          zoomInOut: _enableZoom,
+          darkMode: _startInDarkMode,
         ),
       );
 
@@ -131,6 +134,36 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Viewer Feature Flags',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Enable Search'),
+                      value: _enableSearch,
+                      onChanged: (value) => setState(() => _enableSearch = value),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Enable Zoom In/Out'),
+                      value: _enableZoom,
+                      onChanged: (value) => setState(() => _enableZoom = value),
+                    ),
+                    SwitchListTile(
+                      title: const Text('Start In Dark Mode'),
+                      value: _startInDarkMode,
+                      onChanged: (value) =>
+                          setState(() => _startInDarkMode = value),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
             if (_status != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 24),
@@ -145,10 +178,12 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen> {
                   ),
                 ),
               ),
-            Center(child: ElevatedButton(
-              onPressed: _loading ? null : _pickAndOpenDocument,
-              child: const Text('Pick & Open Document'),
-            ),),
+            Center(
+              child: ElevatedButton(
+                onPressed: _loading ? null : _pickAndOpenDocument,
+                child: const Text('Pick & Open Document'),
+              ),
+            ),
             if (_loading)
               const Padding(
                 padding: EdgeInsets.only(top: 24),
