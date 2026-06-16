@@ -62,6 +62,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     override val displayMetrics get() = resources.displayMetrics
 
     private var darkMode: Boolean = false
+    private var enableSearchFeature: Boolean = false
+    private var enableZoomFeature: Boolean = false
+    private var enableDarkModeToggleFeature: Boolean = false
+    private var currentFilePath: String = ""
+    private var currentDocType: String = ""
 
     private lateinit var loadingContainer: View
     private lateinit var errorView: TextView
@@ -70,8 +75,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     private lateinit var textScrollView: ScrollView
     private lateinit var textView: TextView
 
-        private lateinit var searchInput: android.widget.EditText
+    private lateinit var searchInput: android.widget.EditText
     private lateinit var btnSearchToggle: android.widget.ImageButton
+    private lateinit var btnZoomIn: android.widget.ImageButton
+    private lateinit var btnZoomOut: android.widget.ImageButton
+    private lateinit var btnDarkMode: android.widget.ImageButton
     private var originalText: CharSequence? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +87,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
         val features = intent.getSerializableExtra("features") as? HashMap<String, Any>
         darkMode = features?.get("darkMode") as? Boolean ?: false
+        enableSearchFeature = features?.get("search") as? Boolean ?: false
+        enableZoomFeature = features?.get("zoom") as? Boolean ?: false
+        enableDarkModeToggleFeature = features?.get("darkModeToggle") as? Boolean ?: false
 
         setContentView(buildContentView())
 
@@ -88,6 +99,8 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         val docType = intent.getStringExtra(EXTRA_DOC_TYPE) ?: run {
             showError("No document type provided."); return
         }
+        currentFilePath = filePath
+        currentDocType = docType
         if (!File(filePath).exists()) {
             showError("File not found:\n$filePath"); return
         }
@@ -126,7 +139,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         } else {
             webView.loadDataWithBaseURL(null, finalHtml, "text/html", "UTF-8", null)
         }
-        btnSearchToggle.isVisible = true
+        setToolbarButtonsVisible(true)
     }
 
     override suspend fun showText(text: CharSequence, monospace: Boolean) =
@@ -145,7 +158,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             textView.text = text
             originalText = text
             loadingContainer.isVisible = false
-            btnSearchToggle.isVisible = true
+            setToolbarButtonsVisible(true)
         }
 
     override suspend fun showPdf(file: File) = withContext(Dispatchers.Main) {
@@ -175,6 +188,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                 showError("PDF error: ${e.message}")
             }
             .load()
+        setToolbarButtonsVisible(true)
     }
 
     override fun showError(message: String) {
@@ -198,8 +212,15 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         pdfView?.isVisible = false
         textScrollView.isVisible = false
         errorView.isVisible = false
-        btnSearchToggle.isVisible = false
-            }
+        setToolbarButtonsVisible(false)
+    }
+
+    private fun setToolbarButtonsVisible(visible: Boolean) {
+        btnSearchToggle.isVisible = visible && enableSearchFeature
+        btnZoomIn.isVisible = visible && enableZoomFeature
+        btnZoomOut.isVisible = visible && enableZoomFeature
+        btnDarkMode.isVisible = enableDarkModeToggleFeature
+    }
 
     private fun highlightTextView(query: String) {
         if (originalText == null) return
@@ -235,11 +256,11 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         // --- Custom App Bar ---
         val appBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(MATCH, 150)
+            layoutParams = LinearLayout.LayoutParams(MATCH, 136)
             setBackgroundColor(if (darkMode) Color.parseColor("#1E1E1E") else Color.parseColor("#F8F9FA"))
-            elevation = 8f
+            elevation = 6f
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(32, 0, 32, 0)
+            setPadding(24, 0, 24, 0)
         }
 
         val titleView = TextView(this).apply {
@@ -273,22 +294,49 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             })
         }
 
-        val btnPrev = android.widget.ImageButton(this).apply {
-            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 16 }
-            setImageResource(android.R.drawable.arrow_up_float)
+        btnZoomOut = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 12 }
+            setImageResource(android.R.drawable.ic_media_previous)
             setBackgroundColor(Color.TRANSPARENT)
             imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
             isVisible = false
-            setOnClickListener { if (webView.isVisible) webView.findNext(false) }
+            contentDescription = "Zoom out"
+            setOnClickListener {
+                when {
+                    webView.isVisible -> webView.zoomOut()
+                    textScrollView.isVisible -> textView.textSize = (textView.textSize / resources.displayMetrics.scaledDensity - 1f).coerceAtLeast(11f)
+                    else -> Unit
+                }
+            }
         }
 
-        val btnNext = android.widget.ImageButton(this).apply {
-            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 16 }
-            setImageResource(android.R.drawable.arrow_down_float)
+        btnZoomIn = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 12 }
+            setImageResource(android.R.drawable.ic_media_next)
             setBackgroundColor(Color.TRANSPARENT)
             imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
             isVisible = false
-            setOnClickListener { if (webView.isVisible) webView.findNext(true) }
+            contentDescription = "Zoom in"
+            setOnClickListener {
+                when {
+                    webView.isVisible -> webView.zoomIn()
+                    textScrollView.isVisible -> textView.textSize = (textView.textSize / resources.displayMetrics.scaledDensity + 1f).coerceAtMost(30f)
+                    else -> Unit
+                }
+            }
+        }
+
+        btnDarkMode = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 12 }
+            setImageResource(if (darkMode) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off)
+            setBackgroundColor(Color.TRANSPARENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
+            isVisible = enableDarkModeToggleFeature
+            contentDescription = "Toggle dark mode"
+            setOnClickListener {
+                darkMode = !darkMode
+                recreate()
+            }
         }
 
         btnSearchToggle = android.widget.ImageButton(this).apply {
@@ -301,17 +349,14 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             setOnClickListener {
                 if (searchInput.isVisible) {
                     searchInput.isVisible = false
-                    btnPrev.isVisible = false
-                    btnNext.isVisible = false
                     titleView.isVisible = true
                     searchInput.setText("")
                     setImageResource(android.R.drawable.ic_menu_search)
                     if (webView.isVisible) webView.clearMatches()
                     if (textScrollView.isVisible && originalText != null) textView.text = originalText
                 } else {
+                    if (!enableSearchFeature) return@setOnClickListener
                     searchInput.isVisible = true
-                    btnPrev.isVisible = true
-                    btnNext.isVisible = true
                     titleView.isVisible = false
                     setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
                     searchInput.requestFocus()
@@ -321,8 +366,9 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
         appBar.addView(titleView)
         appBar.addView(searchInput)
-        appBar.addView(btnPrev)
-        appBar.addView(btnNext)
+        appBar.addView(btnZoomOut)
+        appBar.addView(btnZoomIn)
+        appBar.addView(btnDarkMode)
         appBar.addView(btnSearchToggle)
         mainLayout.addView(appBar)
 

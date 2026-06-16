@@ -66,6 +66,15 @@ flutter {
     source = "../.."
 }
 
+configurations.configureEach {
+    resolutionStrategy {
+        force("androidx.test:runner:1.6.2")
+        force("androidx.test:rules:1.6.1")
+        force("androidx.test.espresso:espresso-core:3.6.1")
+        force("androidx.test.espresso:espresso-idling-resource:3.6.1")
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

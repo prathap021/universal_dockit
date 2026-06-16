@@ -112,7 +112,10 @@ dependencies {
     // barteksc artifact is unavailable on JitPack; mhiew fork is published on Maven Central
     implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 
-    // Removed all-documents-reader dependency, now parsing natively
+    // Microsoft Office parsing. poi-ooxml covers DOCX/XLSX/PPTX; scratchpad adds
+    // binary DOC/PPT support via HWPF/HSLF.
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("org.apache.poi:poi-scratchpad:5.2.5")
 
     // -------------------------------------------------------------------------
     // OpenDocument (.odt/.ods/.odp) is parsed in-house via ZIP + XmlPullParser
