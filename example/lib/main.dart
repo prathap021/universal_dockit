@@ -110,9 +110,7 @@ class _DocumentPickerScreenState extends State<DocumentPickerScreen> {
           'txt', 'csv', 'rtf', 'odt', 'ods', 'odp'
         ],
         allowMultiple: false,
-        // iOS may return non-local URLs for cloud providers; bytes fallback
-        // ensures we can copy to a temp file via _resolveFilePath().
-        withData: Platform.isIOS,
+        withData: false,
       );
 
       if (result == null || result.files.isEmpty) {

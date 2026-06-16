@@ -88,9 +88,6 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
             }
 
             let viewController: UIViewController
-            let searchEnabled = (features["search"] as? Bool) ?? true
-            let zoomEnabled = (features["zoomInOut"] as? Bool) ?? true
-            let darkModeEnabled = (features["darkMode"] as? Bool) ?? false
 
             switch docType.lowercased() {
 
@@ -153,7 +150,7 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
 
             if let qlVC = viewController as? QuickLookViewerViewController {
                 qlVC.modalPresentationStyle = .fullScreen
-                if darkModeEnabled {
+                if let isDark = features["darkMode"] as? Bool, isDark {
                     qlVC.overrideUserInterfaceStyle = .dark
                 }
                 rootVC.present(qlVC, animated: true)
@@ -161,20 +158,10 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
                 return
             }
 
-            if let configurable = viewController as? DockitFeatureConfigurable {
-                configurable.applyDockitFeatures(
-                    DockitFeatures(
-                        searchEnabled: searchEnabled,
-                        zoomEnabled: zoomEnabled,
-                        darkModeEnabled: darkModeEnabled
-                    )
-                )
-            }
-
             let nav = UINavigationController(rootViewController: viewController)
             nav.modalPresentationStyle = .fullScreen
             
-            if darkModeEnabled {
+            if let isDark = features["darkMode"] as? Bool, isDark {
                 nav.overrideUserInterfaceStyle = .dark
             }
             
@@ -192,14 +179,4 @@ public class UniversalDockitPlugin: NSObject, FlutterPlugin {
             .first       { $0.isKeyWindow }?
             .rootViewController
     }
-}
-
-struct DockitFeatures {
-    let searchEnabled: Bool
-    let zoomEnabled: Bool
-    let darkModeEnabled: Bool
-}
-
-protocol DockitFeatureConfigurable {
-    func applyDockitFeatures(_ features: DockitFeatures)
 }

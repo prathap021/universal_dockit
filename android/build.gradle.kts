@@ -39,9 +39,7 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.srcDirs("src/main/kotlin", "src/main/java")
-            jniLibs.srcDirs("libreoffice-runtime/jniLibs")
-            assets.srcDirs("libreoffice-runtime/assets")
+            java.srcDirs("src/main/kotlin")
         }
         getByName("test") {
             java.srcDirs("src/test/kotlin")
@@ -51,9 +49,6 @@ android {
     defaultConfig {
         minSdk = 26
         multiDexEnabled = true
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     packaging {

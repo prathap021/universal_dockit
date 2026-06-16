@@ -6,197 +6,183 @@
 
 > ⚠️ **Notice:** This plugin is currently under **Beta version**. APIs, UI, and rendering behavior may change as we continue to improve support for various document types.
 
-A Flutter plugin for viewing documents natively on **Android** and **iOS**.
 
-**Universal Dockit** keeps the Flutter layer minimal: you pass a file path (and optional settings), and the plugin opens a native viewer screen. Rendering is **100% on-device** — no cloud APIs and no commercial SDKs.
+A powerful, high-performance Flutter plugin for viewing a wide variety of documents natively on Android and iOS. 
+
+**Universal Dockit** leverages the best open-source native SDKs and built-in OS frameworks to render documents quickly and beautifully, keeping the Flutter layer minimal and efficient. 
+
+Absolutely **no commercial dependencies**, **no cloud processing**, and **100% on-device rendering**.
 
 ---
 
 ## ✨ Features
 
-* **15 document formats** — PDF, Word, Excel, PowerPoint, EPUB, CBZ, TXT, CSV, RTF, and OpenDocument (ODT/ODS/ODP).
-* **Native renderers per platform** — PdfiumAndroid / PDFKit, Apache POI / QuickLook, CoreXLSX, ZIP parsers, and more.
-* **Android Office pipeline** — Word and Excel parsed with [Apache POI](https://poi.apache.org/) and rendered as HTML in a WebView; PowerPoint is converted to PDF and shown in the PDF viewer.
-* **Configurable viewer features** — `search`, `zoomInOut`, and `darkMode` passed from Flutter via method channel and applied on both platforms.
-* **Fully offline** — all parsing and display happens on the device.
+* **Universal Format Support**: Open 15 different document types including PDF, Word, Excel, PowerPoint, EPUB, CBZ, Text, CSV, RTF, and OpenDocument formats.
+* **Native Performance**: Documents are rendered natively using optimized libraries like `PdfiumAndroid` on Android and `PDFKit`/`QuickLook` on iOS.
+* **Native Office Parsing**: Word, Excel, and PowerPoint files are parsed on-device with Apache POI and rendered into native WebView-friendly HTML.
+* **Smart Rendering**: Formula evaluation in spreadsheets, merged-cell support, Office compatibility fallbacks, native zooming for documents, and HTML structural extraction for E-Books/Comic Books.
+* **Feature-Gated Viewer Controls**: Android viewer actions are controlled only via method-channel feature flags (Search, Zoom, Dark Mode toggle).
+* **Fully Offline**: Everything is parsed and rendered entirely on the device without cloud APIs or heavy monolithic frameworks.
 
 ---
 
 ## 📄 Supported Formats & Native Renderers
 
-| Format | Extension | Android | iOS |
+The plugin intelligently routes each file type to the most appropriate native renderer:
+
+| Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
-| **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) | **PDFKit** |
-| **Word** | `.doc`, `.docx` | Apache POI (HWPF/XWPF) → HTML → WebView | **QuickLook** |
-| **Excel** | `.xls`, `.xlsx` | Apache POI (HSSF/XSSF) → styled HTML table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML → WebView (`.xlsx`); **QuickLook** (`.xls`) |
-| **PowerPoint** | `.ppt`, `.pptx` | Convert to PDF → PdfiumAndroid PDFView | **QuickLook** |
-| **EPUB** | `.epub` | ZIP + spine/HTML → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → WebView |
-| **CBZ** | `.cbz` | ZIP + images → WebView | ZIPFoundation → WebView |
-| **Text** | `.txt` | `TextView` (monospace) | `UITextView` |
-| **CSV** | `.csv` | RFC-4180 → HTML table → WebView | Aligned plain-text → `UITextView` |
-| **RTF** | `.rtf` | `Html.fromHtml` → `TextView` | `NSAttributedString` → `UITextView` |
-| **OpenDocument** | `.odt`, `.ods`, `.odp` | In-house ZIP/XML → HTML → WebView | **QuickLook** |
-
-### Android Office notes
-
-* **`.docx` / `.xlsx` / `.pptx`** — full POI parse with layout-oriented HTML output (tables, merged cells, slide anchors, paragraph styles where supported).
-* **`.doc` / `.ppt`** — limited compatibility mode (text-oriented fallback); a banner is shown when fidelity is reduced.
-* **SpreadsheetML XML** (`.xls` saved as XML) — fallback parser when POI `WorkbookFactory` cannot open the file.
-* **Strict / edge DOCX** — XML zip fallback extracts paragraph text when OOXML parsing fails.
+| **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | [Apache POI](https://poi.apache.org/) (HWPF/XWPF) → HTML → WebView | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [Apache POI](https://poi.apache.org/) (HSSF/XSSF) → Styled HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [Apache POI](https://poi.apache.org/) (HSLF/XSLF) → HTML Slide Layout → WebView | **QuickLook** (Built-in) |
+| **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
+| **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
+| **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
+| **CSV** | `.csv` | RFC-4180 Parser → HTML Table → WebView | Aligned Plain-text Table → `UITextView` |
+| **Rich Text** | `.rtf` | Native HTML Parser → `Html.fromHtml` → `TextView` | `NSAttributedString` → `UITextView` |
+| **OpenDocument**| `.odt`, `.ods`, `.odp`| In-house ZIP/XML Parser → HTML → WebView| **QuickLook** (Built-in) |
 
 ---
 
 ## 🛠 Setup & Installation
 
-**Requirements**
+**Requirements:**
+* **Flutter SDK**: `>=3.10.0`
+* **Dart SDK**: `>=3.0.0 <4.0.0`
 
-| | Minimum |
-| :--- | :--- |
-| Flutter | `>=3.0.0` |
-| Dart | `>=3.0.0 <4.0.0` |
-| Android `minSdk` | **26** |
-| iOS deployment target | **13.0** |
-
-Add the package:
+Add `universal_dockit` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  universal_dockit: ^1.0.1
+  universal_dockit:
 ```
 
-### 🤖 Android
+### 🤖 Android Setup
 
-1. Set `minSdk` to **26** in `android/app/build.gradle` (or `build.gradle.kts`).
-2. Ensure `google()` and `mavenCentral()` are in your project repositories.
-3. No extra Activity or third-party document SDK is required — the plugin ships its own `DocumentViewerActivity` and POI-based parsers.
+1. **Minimum SDK**: Ensure your `minSdkVersion` is at least **26** in `android/app/build.gradle`.
+2. **Repositories**: Keep `google()` and `mavenCentral()` available in your Android project repositories.
+3. **No external activity dependency required**: Office rendering is handled directly inside the plugin via native parsers.
 
-**Optional:** The plugin resolves `content://` URIs by copying to a cache file before opening. For best results, pass a readable local file path when possible.
+### 🍎 iOS Setup
 
-### 🍎 iOS
-
-1. Set the deployment target to at least **13.0** in `ios/Podfile`:
-
+1. **Minimum iOS Version**: Ensure your iOS deployment target is at least **iOS 13.4** in your `ios/Podfile`:
    ```ruby
-   platform :ios, '13.0'
+   platform :ios, '13.4'
    ```
-
-2. Install pods:
-
+2. **Install Pods**: Run the following from your `ios` directory:
    ```bash
-   cd ios && pod install
+   pod install
    ```
 
-No additional `Info.plist` keys are required for the plugin's built-in viewers. If you pick files from iCloud or cloud providers in your app, copy them to a local path (or bytes → temp file) before calling `openDocument`.
+*(Note: The iOS implementation uses pure Swift libraries and built-in Apple frameworks like QuickLook and PDFKit).*
 
 ---
 
 ## 🚀 Usage
 
+Using the plugin is incredibly simple. Just provide the absolute file path to the document.
+
 ```dart
+import 'package:flutter/material.dart';
 import 'package:universal_dockit/universal_dockit.dart';
 
-final dockit = UniversalDockit();
+// ... inside your widget class
 
-// Type is inferred from the file extension.
-await dockit.openDocument('/path/to/report.pdf');
+final _universalDockitPlugin = UniversalDockit();
 
-// Or pass the type explicitly (e.g. no extension).
-await dockit.openDocument(
-  '/path/to/file_without_extension',
+Future<void> openMyDocument(String filePath) async {
+  try {
+    // The plugin will automatically infer the document type from the extension.
+    final success = await _universalDockitPlugin.openDocument(filePath);
+    
+    if (!success) {
+      debugPrint("Could not open the document.");
+    }
+  } catch (e) {
+    debugPrint("Error opening document: $e");
+  }
+}
+
+// Alternatively, you can explicitly provide the document type:
+// await _universalDockitPlugin.openDocument(filePath, docType: DocType.pdf);
+```
+
+### Explicit Document Types
+
+If your file doesn't have an extension, or you want to force a specific renderer, you can pass the `DocType` enum explicitly:
+
+```dart
+await _universalDockitPlugin.openDocument(
+  '/path/to/file_without_extension', 
   docType: DocType.docx,
 );
 ```
 
-Supported `DocType` values:  
-`pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `epub`, `cbz`, `txt`, `csv`, `rtf`, `odt`, `ods`, `odp`.
+Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, `epub`, `cbz`, `txt`, `csv`, `rtf`, `odt`, `ods`, `odp`.
 
-### Document features
+### Configuring Document Features
 
-`DocumentFeatures` exposes **three** viewer options. They are sent over the method channel as `features` and interpreted by native code on **Android and iOS**.
+Viewer controls are feature-gated on Android. A control appears only when the corresponding `DocumentFeatures` flag is enabled from Flutter.
 
 ```dart
-await dockit.openDocument(
+await _universalDockitPlugin.openDocument(
   filePath,
   features: const DocumentFeatures(
-    search: true,      // default: true
-    zoomInOut: true,   // default: true
-    darkMode: false,   // default: false — initial dark theme
+    darkMode: true, // Initial theme state
+    zoomInOut: true,
+    search: true,
+    darkModeToggle: true, // Show dark mode toggle action in Android app bar
   ),
 );
 ```
 
-| Flag | Default | Android | iOS |
-| :--- | :--- | :--- | :--- |
-| `search` | `true` | Shows search control in the document app bar; highlights matches in WebView / plain text. | Applied on custom viewers (PDF, XLSX, TXT, CSV, RTF, EPUB, CBZ) via native feature configuration. QuickLook uses system preview (no custom search bar). |
-| `zoomInOut` | `true` | Shows zoom in/out in the app bar; WebView zoom + text size for text documents. | Enables pinch zoom on WebView-based viewers; adjusts PDF zoom behavior on `PDFViewerViewController`. QuickLook uses system gestures. |
-| `darkMode` | `false` | Dark theme for viewer UI and HTML injection for WebView content; shows dark-mode toggle when enabled. | Sets dark interface style on the presented navigation / QuickLook controller. |
-
-Set a flag to `false` to disable that capability for the opened document session.
+Current Android app bar controls:
+- `search` -> Search action
+- `zoomInOut` -> Zoom in/out actions
+- `darkModeToggle` -> Theme toggle action
 
 ---
 
-## 🏗 Architecture
+## 🏗 Architecture Under the Hood
 
-**Flutter**
+To keep the codebase maintainable and performant, the native code is split using the Strategy Pattern:
 
-* `UniversalDockit.openDocument()` → `MethodChannel('universal_dockit')` with `filePath`, `docType`, and `features`.
-
-**Android**
-
-* `UniversalDockitPlugin` → `DocumentViewerActivity` (host).
-* Per-format `DocumentRenderer` implementations (`WordDocumentRenderer`, `ExcelDocumentRenderer`, `PowerPointDocumentRenderer`, `PdfDocumentRenderer`, etc.).
-* Office files: Apache POI → structured models → HTML → WebView.
-* `RenderCallbacks` bridges parsing/rendering back to the Activity (WebView, PDFView, TextView).
-
-**iOS**
-
-* `UniversalDockitPlugin` routes by `docType` to dedicated view controllers (`PDFViewerViewController`, `XLSXViewerViewController`, `QuickLookViewerViewController`, etc.).
-* `DockitFeatures` / `DockitFeatureConfigurable` apply `search`, `zoomInOut`, and `darkMode` on supported custom viewers.
+* **Android**: `UniversalDockitPlugin` handles dispatching. All documents use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific `DocumentRenderer` implementations (e.g., `WordDocumentRenderer`, `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface. Office files are parsed natively with Apache POI, then converted to renderer-friendly HTML with compatibility fallbacks for problematic legacy/strict files.
+* **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `EpubViewerViewController`).
 
 ---
 
-## 📦 Example app
+## 🤝 Contributing and Feedback
 
-The bundled example (`example/`) demonstrates:
+We welcome contributions and feedback! Here’s how you can help:
 
-* Picking a file with `file_picker`
-* Resolving iOS cloud paths via `path_provider` temp copy when needed
-* Toggling `DocumentFeatures` before `openDocument`
+### 🐛 Reporting Bugs
+If you find a bug, please [open an issue](https://github.com/prathap021/universal_dockit/issues) with:
+* A clear description of the problem.
+* Steps to reproduce the issue.
+* The document format (e.g., PDF, DOCX) causing the issue.
+* Your Flutter version and the platform (Android/iOS) where the issue occurs.
 
-Run from the example directory:
 
-```bash
-flutter run
-```
+### 🛠️ Contributing Code
+We love pull requests! If you'd like to contribute directly to the code:
+1. Fork the repository.
+2. Create a new branch for your feature or bugfix (`git checkout -b feature/my-new-feature`).
+3. Commit your changes (`git commit -m 'Add some feature'`).
+4. Push to the branch (`git push origin feature/my-new-feature`).
+5. Open a Pull Request.
 
----
-
-## 🤝 Contributing
-
-### Report a bug
-
-[Open an issue](https://github.com/prathap021/universal_dockit/issues) with:
-
-* Steps to reproduce
-* Document format and sample file characteristics (if possible)
-* Flutter version and platform (Android / iOS)
-
-### Pull requests
-
-1. Fork the repo
-2. Create a feature branch
-3. Commit with a clear message
-4. Open a PR
+Please ensure your code follows standard Flutter linting rules.
 
 ---
 
 ## 📝 License
 
-MIT — see [LICENSE](LICENSE).
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-**Open-source libraries used internally**
-
-* [PdfiumAndroid / android-pdf-viewer](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)
-* [Apache POI](https://poi.apache.org/) (Apache 2.0)
-* [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)
-* [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)
+*Open-source libraries used internally:*
+* *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
+* *[Apache POI](https://poi.apache.org/) (Apache 2.0)*
+* *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
+* *[ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)*

@@ -13,14 +13,13 @@ import UIKit
 ///  5. Fallback: strip RTF control sequences → plain text in UITextView
 ///
 /// No external dependencies — uses Foundation + UIKit only.
-final class RtfViewerViewController: UIViewController, DockitFeatureConfigurable {
+final class RtfViewerViewController: UIViewController {
 
     // MARK: - Properties
 
     private let fileURL: URL
     private var textView: UITextView!
     private var activityIndicator: UIActivityIndicatorView!
-    private var dockitFeatures = DockitFeatures(searchEnabled: true, zoomEnabled: true, darkModeEnabled: false)
 
     // MARK: - Init
 
@@ -36,7 +35,6 @@ final class RtfViewerViewController: UIViewController, DockitFeatureConfigurable
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        applyFeatureState()
         loadFile()
     }
 
@@ -183,17 +181,6 @@ final class RtfViewerViewController: UIViewController, DockitFeatureConfigurable
         navigationController?.navigationBar.barTintColor = UIColor(hex: 0x16213E)
         navigationController?.navigationBar.titleTextAttributes = [.foregroundColor: UIColor.white]
         navigationController?.navigationBar.tintColor = UIColor(hex: 0xE94560)
-    }
-
-    func applyDockitFeatures(_ features: DockitFeatures) {
-        dockitFeatures = features
-        guard isViewLoaded else { return }
-        applyFeatureState()
-    }
-
-    private func applyFeatureState() {
-        textView?.isSelectable = dockitFeatures.searchEnabled
-        textView?.isScrollEnabled = dockitFeatures.zoomEnabled || dockitFeatures.searchEnabled
     }
 
     @objc private func closeTapped() { dismiss(animated: true) }
