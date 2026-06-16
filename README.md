@@ -32,9 +32,9 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
-| **Word (doc, docx)** | `.doc`, `.docx` | Native ZIP/XML Parser → HTML → WebView | **QuickLook** (Built-in) |
-| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | Native ZIP/XML Parser → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
-| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | Native ZIP/XML Parser → HTML → WebView | **QuickLook** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | [Feathur](https://github.com/sarthakchakraborty12/feathur) Native Parser → HTML → WebView | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [Feathur](https://github.com/sarthakchakraborty12/feathur) Native Parser → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [Feathur](https://github.com/sarthakchakraborty12/feathur) Native Parser → HTML → WebView | **QuickLook** (Built-in) |
 | **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
 | **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
