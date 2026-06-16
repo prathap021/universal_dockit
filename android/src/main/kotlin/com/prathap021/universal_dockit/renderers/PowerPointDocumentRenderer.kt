@@ -30,13 +30,12 @@ internal class PowerPointDocumentRenderer : DocumentRenderer {
                     append("<div style='position: relative; width: 100%; padding-bottom: \${slidePaddingBottom}%; background-color: \$hexBg; margin-bottom: 24px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); overflow: hidden;'>")
                     
                     for (element in slide.elements) {
-                        val left = element.x * 100
-                        val top = element.y * 100
-                        val width = element.width * 100
-                        val height = element.height * 100
-                        
                         when (element) {
                             is SlideGraphicElement.TextBlock -> {
+                                val left = element.x * 100
+                                val top = element.y * 100
+                                val width = element.width * 100
+                                val height = element.height * 100
                                 val hexColor = String.format("#%06X", 0xFFFFFF and element.textColor.toInt())
                                 var style = "position: absolute; left: \${left}%; top: \${top}%; width: \${width}%; height: \${height}%; color: \$hexColor; font-size: \${element.fontSize}px; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center;"
                                 if (element.isBold) style += " font-weight: bold;"
@@ -46,11 +45,19 @@ internal class PowerPointDocumentRenderer : DocumentRenderer {
                                 append("<div style='\$style'>\$escapedText</div>")
                             }
                             is SlideGraphicElement.ShapeBlock -> {
+                                val left = element.x * 100
+                                val top = element.y * 100
+                                val width = element.width * 100
+                                val height = element.height * 100
                                 val hexColor = String.format("#%06X", 0xFFFFFF and element.color.toInt())
                                 val style = "position: absolute; left: \${left}%; top: \${top}%; width: \${width}%; height: \${height}%; background-color: \$hexColor;"
                                 append("<div style='\$style'></div>")
                             }
                             is SlideGraphicElement.ImageBlock -> {
+                                val left = element.x * 100
+                                val top = element.y * 100
+                                val width = element.width * 100
+                                val height = element.height * 100
                                 val base64Img = bitmapToBase64(element.bitmap)
                                 val style = "position: absolute; left: \${left}%; top: \${top}%; width: \${width}%; height: \${height}%; object-fit: contain;"
                                 append("<img src='data:image/png;base64,\$base64Img' style='\$style'/>")
