@@ -19,8 +19,9 @@ Absolutely **no commercial dependencies**, **no cloud processing**, and **100% o
 
 * **Universal Format Support**: Open 15 different document types including PDF, Word, Excel, PowerPoint, EPUB, CBZ, Text, CSV, RTF, and OpenDocument formats.
 * **Native Performance**: Documents are rendered natively using optimized libraries like `PdfiumAndroid` on Android and `PDFKit`/`QuickLook` on iOS.
-* **Format-Specific Themes**: Beautiful, color-coded native headers (e.g., Blue for Word, Green for Excel, Purple for EPUB) provide a cohesive, premium UI out-of-the-box.
-* **Smart Rendering**: Formula evaluation in spreadsheets, native zooming and scrolling for PDFs, and HTML structural extraction for E-Books and Comic Books.
+* **Native Office Parsing**: Word, Excel, and PowerPoint files are parsed on-device with Apache POI and rendered into native WebView-friendly HTML.
+* **Smart Rendering**: Formula evaluation in spreadsheets, merged-cell support, Office compatibility fallbacks, native zooming for documents, and HTML structural extraction for E-Books/Comic Books.
+* **Feature-Gated Viewer Controls**: Android viewer actions are controlled only via method-channel feature flags (Search, Zoom, Dark Mode toggle).
 * **Fully Offline**: Everything is parsed and rendered entirely on the device without cloud APIs or heavy monolithic frameworks.
 
 ---
@@ -32,9 +33,9 @@ The plugin intelligently routes each file type to the most appropriate native re
 | Format | Extension | Android Engine | iOS Engine |
 | :--- | :--- | :--- | :--- |
 | **PDF** | `.pdf` | [PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Hardware accelerated) | **PDFKit** (Built-in) |
-| **Word (doc, docx)** | `.doc`, `.docx` | [Feathur](https://github.com/sarthakchakraborty12/feathur) Native Parser → HTML → WebView | **QuickLook** (Built-in) |
-| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [Feathur](https://github.com/sarthakchakraborty12/feathur) Native Parser → HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
-| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [Feathur](https://github.com/sarthakchakraborty12/feathur) Native Parser → HTML → WebView | **QuickLook** (Built-in) |
+| **Word (doc, docx)** | `.doc`, `.docx` | [Apache POI](https://poi.apache.org/) (HWPF/XWPF) → HTML → WebView | **QuickLook** (Built-in) |
+| **Excel (xls, xlsx)** | `.xls`, `.xlsx` | [Apache POI](https://poi.apache.org/) (HSSF/XSSF) → Styled HTML Table → WebView | [CoreXLSX](https://github.com/CoreOffice/CoreXLSX) → HTML Table → WebView |
+| **PowerPoint (ppt, pptx)**| `.ppt`, `.pptx` | [Apache POI](https://poi.apache.org/) (HSLF/XSLF) → HTML Slide Layout → WebView | **QuickLook** (Built-in) |
 | **EPUB E-Book** | `.epub` | Native ZIP → spine/HTML extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → spine/HTML → WebView |
 | **CBZ Comic Book** | `.cbz` | Native ZIP → Image extraction → WebView | [ZIPFoundation](https://github.com/weichsel/ZIPFoundation) → Image extraction → WebView |
 | **Text** | `.txt` | Native `TextView` (Monospace, memory-efficient) | Native `UITextView` (Monospace) |
@@ -59,10 +60,9 @@ dependencies:
 
 ### 🤖 Android Setup
 
-1. **Minimum SDK**: Ensure your `minSdkVersion` is at least **24** in `android/app/build.gradle`.
-2. **JitPack Repository**: Ensure that JitPack is added to your project's `settings.gradle` or root `build.gradle` because the document reader SDK is hosted there.
-
-Because the plugin handles the heavy lifting with its own `build.gradle.kts`, you don't need to add any specific repository exclusions manually in your app module.
+1. **Minimum SDK**: Ensure your `minSdkVersion` is at least **26** in `android/app/build.gradle`.
+2. **Repositories**: Keep `google()` and `mavenCentral()` available in your Android project repositories.
+3. **No external activity dependency required**: Office rendering is handled directly inside the plugin via native parsers.
 
 ### 🍎 iOS Setup
 
@@ -123,20 +123,24 @@ Supported `DocType` values: `pdf`, `doc`, `docx`, `xls`, `xlsx`, `ppt`, `pptx`, 
 
 ### Configuring Document Features
 
-By default, the plugin automatically enables all standard viewer features (zooming, searching, page navigation, etc.). You can configure specific features by passing a `DocumentFeatures` object.
+Viewer controls are feature-gated on Android. A control appears only when the corresponding `DocumentFeatures` flag is enabled from Flutter.
 
 ```dart
 await _universalDockitPlugin.openDocument(
   filePath,
   features: const DocumentFeatures(
-    darkMode: true, // Enable native dark mode rendering
+    darkMode: true, // Initial theme state
     zoomInOut: true,
     search: true,
-    // Note: All other features like textSelection, renderImages, etc., 
-    // are enabled by default. Only specify what you want to change!
+    darkModeToggle: true, // Show dark mode toggle action in Android app bar
   ),
 );
 ```
+
+Current Android app bar controls:
+- `search` -> Search action
+- `zoomInOut` -> Zoom in/out actions
+- `darkModeToggle` -> Theme toggle action
 
 ---
 
@@ -144,7 +148,7 @@ await _universalDockitPlugin.openDocument(
 
 To keep the codebase maintainable and performant, the native code is split using the Strategy Pattern:
 
-* **Android**: `UniversalDockitPlugin` handles dispatching. All documents use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific consolidated implementations of `DocumentRenderer` (e.g., `WordDocumentRenderer`, `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface. Office files (.docx, .xlsx, .pptx) are parsed completely natively using a lightweight ZIP/XML parser engine, removing the need for heavy external activities.
+* **Android**: `UniversalDockitPlugin` handles dispatching. All documents use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific `DocumentRenderer` implementations (e.g., `WordDocumentRenderer`, `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface. Office files are parsed natively with Apache POI, then converted to renderer-friendly HTML with compatibility fallbacks for problematic legacy/strict files.
 * **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `EpubViewerViewController`).
 
 ---
@@ -179,6 +183,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 *Open-source libraries used internally:*
 * *[PdfiumAndroid](https://github.com/barteksc/AndroidPdfViewer) (Apache 2.0)*
-* *Native Office Parsers inspired by [Feathur](https://github.com/sarthakchakraborty12/feathur)*
+* *[Apache POI](https://poi.apache.org/) (Apache 2.0)*
 * *[CoreXLSX](https://github.com/CoreOffice/CoreXLSX) (Apache 2.0)*
 * *[ZIPFoundation](https://github.com/weichsel/ZIPFoundation) (MIT)*
