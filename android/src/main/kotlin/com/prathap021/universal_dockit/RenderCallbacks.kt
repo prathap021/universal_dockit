@@ -20,7 +20,7 @@ internal interface RenderCallbacks {
 
     /**
      * Display HTML content in the shared WebView.
-     * Used by: DOC, DOCX, XLS, XLSX, PPT, PPTX, CSV, ODT, ODS, ODP renderers.
+     * Used by: DOC, DOCX, XLS, XLSX, CSV, ODT, ODS, ODP renderers.
      */
     suspend fun showWebContent(html: String, baseUrl: String? = null)
 
@@ -34,7 +34,7 @@ internal interface RenderCallbacks {
      */
     suspend fun showText(text: CharSequence, monospace: Boolean = true)
 
-    /** Display a PDF file in the PdfiumAndroid PDFView. Used by: PDF renderer. */
+    /** Display a PDF file in the PdfiumAndroid PDFView. Used by: PDF and PPT/PPTX renderers. */
     suspend fun showPdf(file: File)
 
     /** Show an error message. Can be called from any thread. */

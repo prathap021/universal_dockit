@@ -17,6 +17,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
 import com.prathap021.universal_dockit.renderers.CsvDocumentRenderer
 import com.prathap021.universal_dockit.renderers.DocumentRenderer
@@ -42,7 +46,7 @@ import java.io.File
  * │ pdf        │ PdfDocumentRenderer (PdfiumAndroid)     │
  * │ doc, docx  │ WordDocumentRenderer (POI → HTML)               │
  * │ xls, xlsx  │ ExcelDocumentRenderer (POI → HTML)              │
- * │ ppt, pptx  │ PowerPointDocumentRenderer (POI text → HTML)    │
+ * │ ppt, pptx  │ PowerPointDocumentRenderer (convert → PDF → PDFView) │
  * │ txt        │ TxtDocumentRenderer (TextView, monospace)│
  * │ csv        │ CsvDocumentRenderer (RFC4180 → HTML)    │
  * │ rtf        │ RtfDocumentRenderer (Html.fromHtml)     │
@@ -64,7 +68,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     private var darkMode: Boolean = false
     private var enableSearchFeature: Boolean = false
     private var enableZoomFeature: Boolean = false
-    private var enableDarkModeToggleFeature: Boolean = false
+    private var enableDarkModeFeature: Boolean = false
     private var currentFilePath: String = ""
     private var currentDocType: String = ""
 
@@ -77,6 +81,8 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
     private lateinit var searchInput: android.widget.EditText
     private lateinit var btnSearchToggle: android.widget.ImageButton
+    private lateinit var btnSearchPrev: android.widget.ImageButton
+    private lateinit var btnSearchNext: android.widget.ImageButton
     private lateinit var btnZoomIn: android.widget.ImageButton
     private lateinit var btnZoomOut: android.widget.ImageButton
     private lateinit var btnDarkMode: android.widget.ImageButton
@@ -89,9 +95,12 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         darkMode = features?.get("darkMode") as? Boolean ?: false
         enableSearchFeature = features?.get("search") as? Boolean ?: false
         enableZoomFeature = features?.get("zoomInOut") as? Boolean ?: false
-        enableDarkModeToggleFeature = features?.get("darkModeToggle") as? Boolean ?: false
+        enableDarkModeFeature = features?.get("darkMode") as? Boolean ?: false
 
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(buildContentView())
+        applySystemBarStyle()
+        applyZoomFeatureToWebView()
 
         val filePath = intent.getStringExtra(EXTRA_FILE_PATH) ?: run {
             showError("No file path provided."); return
@@ -177,7 +186,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             .defaultPage(0)
             .enableSwipe(true)
             .swipeHorizontal(false)
-            .enableDoubletap(true)
+            .enableDoubletap(enableZoomFeature)
             .enableAntialiasing(true)
             .spacing(8)
             .scrollHandle(DefaultScrollHandle(this@DocumentViewerActivity))
@@ -215,11 +224,32 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         setToolbarButtonsVisible(false)
     }
 
+    private fun applySystemBarStyle() {
+        val appBarColor = if (darkMode) Color.parseColor("#1E1E1E") else Color.parseColor("#F8F9FA")
+        window.statusBarColor = appBarColor
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkMode
+        }
+    }
+
     private fun setToolbarButtonsVisible(visible: Boolean) {
         btnSearchToggle.isVisible = visible && enableSearchFeature
         btnZoomIn.isVisible = visible && enableZoomFeature
         btnZoomOut.isVisible = visible && enableZoomFeature
-        btnDarkMode.isVisible = enableDarkModeToggleFeature
+        btnDarkMode.isVisible = enableDarkModeFeature
+        updateSearchNavigationVisible()
+    }
+
+    private fun updateSearchNavigationVisible() {
+        val searchActive = enableSearchFeature && searchInput.isVisible
+        val webSearch = searchActive && webView.isVisible
+        btnSearchPrev.isVisible = webSearch
+        btnSearchNext.isVisible = webSearch
+    }
+
+    private fun applyZoomFeatureToWebView() {
+        webView.settings.setSupportZoom(enableZoomFeature)
+        webView.settings.builtInZoomControls = enableZoomFeature
     }
 
     private fun highlightTextView(query: String) {
@@ -253,14 +283,29 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             setBackgroundColor(if (darkMode) Color.BLACK else BG)
         }
 
-        // --- Custom App Bar ---
+        val horizontalPadding = (24 * resources.displayMetrics.density).toInt()
+        val toolbarMinHeight = (56 * resources.displayMetrics.density).toInt()
+
+        // --- Custom App Bar (respects status-bar safe area) ---
         val appBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(MATCH, 136)
+            layoutParams = LinearLayout.LayoutParams(MATCH, WRAP)
+            minimumHeight = toolbarMinHeight
             setBackgroundColor(if (darkMode) Color.parseColor("#1E1E1E") else Color.parseColor("#F8F9FA"))
             elevation = 6f
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(24, 0, 24, 0)
+            setPadding(horizontalPadding, 0, horizontalPadding, (12 * resources.displayMetrics.density).toInt())
+
+            ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+                val statusBars = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+                view.setPadding(
+                    horizontalPadding,
+                    statusBars.top,
+                    horizontalPadding,
+                    (12 * resources.displayMetrics.density).toInt()
+                )
+                insets
+            }
         }
 
         val titleView = TextView(this).apply {
@@ -294,9 +339,33 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             })
         }
 
-        btnZoomOut = android.widget.ImageButton(this).apply {
+        btnSearchPrev = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 8 }
+            setImageResource(android.R.drawable.arrow_up_float)
+            setBackgroundColor(Color.TRANSPARENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
+            isVisible = false
+            contentDescription = "Previous search result"
+            setOnClickListener {
+                if (webView.isVisible) webView.findNext(false)
+            }
+        }
+
+        btnSearchNext = android.widget.ImageButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 12 }
-            setImageResource(android.R.drawable.ic_media_previous)
+            setImageResource(android.R.drawable.arrow_down_float)
+            setBackgroundColor(Color.TRANSPARENT)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
+            isVisible = false
+            contentDescription = "Next search result"
+            setOnClickListener {
+                if (webView.isVisible) webView.findNext(true)
+            }
+        }
+
+        btnZoomOut = android.widget.ImageButton(this).apply {
+            layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 8 }
+            setImageResource(android.R.drawable.ic_menu_revert)
             setBackgroundColor(Color.TRANSPARENT)
             imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
             isVisible = false
@@ -312,7 +381,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
 
         btnZoomIn = android.widget.ImageButton(this).apply {
             layoutParams = LinearLayout.LayoutParams(WRAP, WRAP).apply { marginEnd = 12 }
-            setImageResource(android.R.drawable.ic_media_next)
+            setImageResource(android.R.drawable.ic_input_add)
             setBackgroundColor(Color.TRANSPARENT)
             imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
             isVisible = false
@@ -331,7 +400,7 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
             setImageResource(if (darkMode) android.R.drawable.btn_star_big_on else android.R.drawable.btn_star_big_off)
             setBackgroundColor(Color.TRANSPARENT)
             imageTintList = android.content.res.ColorStateList.valueOf(if (darkMode) Color.WHITE else Color.BLACK)
-            isVisible = enableDarkModeToggleFeature
+            isVisible = enableDarkModeFeature
             contentDescription = "Toggle dark mode"
             setOnClickListener {
                 darkMode = !darkMode
@@ -354,23 +423,28 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
                     setImageResource(android.R.drawable.ic_menu_search)
                     if (webView.isVisible) webView.clearMatches()
                     if (textScrollView.isVisible && originalText != null) textView.text = originalText
+                    updateSearchNavigationVisible()
                 } else {
                     if (!enableSearchFeature) return@setOnClickListener
                     searchInput.isVisible = true
                     titleView.isVisible = false
                     setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
                     searchInput.requestFocus()
+                    updateSearchNavigationVisible()
                 }
             }
         }
 
         appBar.addView(titleView)
         appBar.addView(searchInput)
+        appBar.addView(btnSearchPrev)
+        appBar.addView(btnSearchNext)
         appBar.addView(btnZoomOut)
         appBar.addView(btnZoomIn)
         appBar.addView(btnDarkMode)
         appBar.addView(btnSearchToggle)
         mainLayout.addView(appBar)
+        ViewCompat.requestApplyInsets(appBar)
 
         val content = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(MATCH, 0, 1f)
@@ -389,8 +463,8 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
         webView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(MATCH, MATCH)
             settings.javaScriptEnabled = false
-            settings.setSupportZoom(true)
-            settings.builtInZoomControls = true
+            settings.setSupportZoom(enableZoomFeature)
+            settings.builtInZoomControls = enableZoomFeature
             settings.displayZoomControls = false
             settings.useWideViewPort = true
             settings.loadWithOverviewMode = true

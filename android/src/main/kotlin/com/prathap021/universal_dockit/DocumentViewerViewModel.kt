@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.prathap021.universal_dockit.renderers.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class DocumentViewerViewModel : ViewModel() {
 
@@ -18,18 +17,17 @@ class DocumentViewerViewModel : ViewModel() {
             "odt" -> OdtDocumentRenderer()
             "ods" -> OdsDocumentRenderer()
             "odp" -> OdpDocumentRenderer()
-            "docx", "doc" -> WordDocumentRenderer()
-            "xlsx", "xls" -> ExcelDocumentRenderer()
-            "pptx", "ppt" -> PowerPointDocumentRenderer()
+            "docx", "doc" -> LibreOfficeDocumentRenderer("doc")
+            "xlsx", "xls" -> LibreOfficeDocumentRenderer("xls")
+            "pptx", "ppt" -> LibreOfficeDocumentRenderer("ppt")
             else -> {
                 callbacks.showError("Unsupported document type: $docType")
                 return
             }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
-                // The renderer internals already use withContext(Dispatchers.IO) for parsing.
                 renderer.render(filePath, callbacks)
             } catch (e: Throwable) {
                 callbacks.showError("Failed to render document\n${e.javaClass.simpleName}: ${e.message ?: ""}")

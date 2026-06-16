@@ -13,13 +13,15 @@ import CoreXLSX
 ///
 /// Note: CoreXLSX supports .xlsx (OOXML) only.
 ///       Legacy .xls (binary OLE2) files are handled by QuickLookViewerViewController.
-final class XLSXViewerViewController: UIViewController {
+final class XLSXViewerViewController: UIViewController, DockitFeatureConfigurable {
 
     // MARK: - Properties
 
     private let fileURL: URL
     private var webView: WKWebView!
     private var activityIndicator: UIActivityIndicatorView!
+    private var dockitFeatures = DockitFeatures(searchEnabled: true, zoomEnabled: true, darkModeEnabled: false)
+    private let webControls = DockitWebViewControls()
 
     // MARK: - Init
 
@@ -35,6 +37,7 @@ final class XLSXViewerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        applyFeatureState()
         loadXLSX()
     }
 
@@ -64,6 +67,7 @@ final class XLSXViewerViewController: UIViewController {
         webView.scrollView.backgroundColor = .clear
         webView.isOpaque = false
         view.addSubview(webView)
+        webControls.attach(host: self, webView: webView)
 
         // Activity indicator
         activityIndicator = UIActivityIndicatorView(style: .large)
@@ -189,6 +193,16 @@ final class XLSXViewerViewController: UIViewController {
     }
 
     @objc private func closeTapped() { dismiss(animated: true) }
+
+    func applyDockitFeatures(_ features: DockitFeatures) {
+        dockitFeatures = features
+        guard isViewLoaded else { return }
+        webControls.apply(features: features)
+    }
+
+    private func applyFeatureState() {
+        webControls.apply(features: dockitFeatures)
+    }
 
     // MARK: - HTML Templates
 

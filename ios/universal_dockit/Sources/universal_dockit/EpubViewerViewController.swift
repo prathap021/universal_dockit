@@ -2,9 +2,11 @@ import UIKit
 import WebKit
 import ZIPFoundation
 
-public class EpubViewerViewController: UIViewController {
+public class EpubViewerViewController: UIViewController, DockitFeatureConfigurable {
     private let fileURL: URL
     private var webView: WKWebView!
+    private var dockitFeatures = DockitFeatures(searchEnabled: true, zoomEnabled: true, darkModeEnabled: false)
+    private let webControls = DockitWebViewControls()
 
     public init(fileURL: URL) {
         self.fileURL = fileURL
@@ -18,6 +20,7 @@ public class EpubViewerViewController: UIViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        applyFeatureState()
         loadEPUB()
     }
 
@@ -37,10 +40,21 @@ public class EpubViewerViewController: UIViewController {
         webView = WKWebView(frame: view.bounds, configuration: config)
         webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(webView)
+        webControls.attach(host: self, webView: webView)
     }
 
     @objc private func closeTapped() {
         dismiss(animated: true)
+    }
+
+    func applyDockitFeatures(_ features: DockitFeatures) {
+        dockitFeatures = features
+        guard isViewLoaded else { return }
+        webControls.apply(features: features)
+    }
+
+    private func applyFeatureState() {
+        webControls.apply(features: dockitFeatures)
     }
 
     private func loadEPUB() {

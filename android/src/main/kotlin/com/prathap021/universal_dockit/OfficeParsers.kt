@@ -1,7 +1,5 @@
 package com.prathap021.universal_dockit
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.ensureActive
@@ -18,11 +16,13 @@ import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.util.Units
 import org.apache.poi.xslf.usermodel.XSLFAutoShape
+import org.apache.poi.xslf.usermodel.XSLFGroupShape
 import org.apache.poi.xslf.usermodel.XSLFPictureShape
 import org.apache.poi.xslf.usermodel.XSLFShape
 import org.apache.poi.xslf.usermodel.XMLSlideShow
 import org.apache.poi.xslf.usermodel.XSLFTextShape
 import org.apache.poi.xwpf.usermodel.XWPFDocument
+import org.apache.poi.xwpf.usermodel.XWPFHeaderFooter
 import org.apache.poi.xwpf.usermodel.XWPFParagraph
 import org.apache.poi.xwpf.usermodel.XWPFTableCell
 import org.apache.poi.xwpf.usermodel.XWPFTable
@@ -55,10 +55,16 @@ sealed class DocxElement {
         val height: Double,
         val description: String?
     ) : DocxElement()
+
+    data class Chart(
+        val width: Double,
+        val height: Double,
+        val title: String? = null
+    ) : DocxElement()
 }
 
 data class DocxTableCell(
-    val text: String,
+    val content: List<DocxElement>,
     val colSpan: Int = 1,
     val backgroundColor: String? = null,
     val alignment: String? = null
@@ -124,7 +130,9 @@ data class SlideDocument(
 data class SlideItem(
     val index: Int,
     val elements: List<SlideGraphicElement>,
-    val backgroundColor: Long = 0xFFFFFFFF
+    val backgroundColor: Long = 0xFFFFFFFF,
+    val backgroundImageBase64: String? = null,
+    val backgroundImageMime: String? = null
 )
 
 sealed class SlideGraphicElement {
@@ -141,7 +149,8 @@ sealed class SlideGraphicElement {
     ) : SlideGraphicElement()
 
     data class ImageBlock(
-        val bitmap: Bitmap,
+        val base64: String,
+        val mimeType: String,
         val x: Float,
         val y: Float,
         val width: Float,
@@ -195,16 +204,33 @@ object OfficeParsers {
     private suspend fun parseDocx(filePath: String): ParsedDocument.Word {
         FileInputStream(filePath).use { input ->
             XWPFDocument(input).use { document ->
-                val elements = mutableListOf<DocxElement>()
-                for (bodyElement in document.bodyElements) {
-                    coroutineContext.ensureActive()
-                    when (bodyElement) {
-                        is XWPFParagraph -> elements.addAll(paragraphElements(bodyElement))
-                        is XWPFTable -> elements.add(tableElement(bodyElement))
-                        else -> Unit
+                ZipFile(filePath).use { zip ->
+                    val docRels = buildWordRelationshipMap(zip, "word/_rels/document.xml.rels")
+                    val seenVisuals = mutableSetOf<String>()
+                    val elements = mutableListOf<DocxElement>()
+
+                    fun addParagraph(paragraph: XWPFParagraph, rels: Map<String, String>) {
+                        elements.addAll(paragraphElements(paragraph, zip, rels, seenVisuals))
                     }
+
+                    fun addHeaderFooter(part: XWPFHeaderFooter) {
+                        val rels = relationshipMapForPart(zip, part)
+                        part.paragraphs.forEach { addParagraph(it, rels) }
+                        part.tables.forEach { elements.add(tableElement(it, zip, rels, seenVisuals)) }
+                    }
+
+                    for (bodyElement in document.bodyElements) {
+                        coroutineContext.ensureActive()
+                        when (bodyElement) {
+                            is XWPFParagraph -> addParagraph(bodyElement, docRels)
+                            is XWPFTable -> elements.add(tableElement(bodyElement, zip, docRels, seenVisuals))
+                            else -> Unit
+                        }
+                    }
+                    document.headerList.forEach { addHeaderFooter(it) }
+                    document.footerList.forEach { addHeaderFooter(it) }
+                    return ParsedDocument.Word(elements)
                 }
-                return ParsedDocument.Word(elements)
             }
         }
     }
@@ -230,7 +256,12 @@ object OfficeParsers {
         }
     }
 
-    private fun paragraphElements(paragraph: XWPFParagraph): List<DocxElement> {
+    private fun paragraphElements(
+        paragraph: XWPFParagraph,
+        zip: ZipFile,
+        rels: Map<String, String>,
+        seenVisuals: MutableSet<String>
+    ): List<DocxElement> {
         val elements = mutableListOf<DocxElement>()
         val runs = mutableListOf<TextRun>()
 
@@ -255,6 +286,7 @@ object OfficeParsers {
                 val pictureData = picture.pictureData ?: continue
                 val bytes = pictureData.data ?: continue
                 if (bytes.isEmpty()) continue
+                if (!registerImageKeys(seenVisuals, bytes, "poi:embedded")) continue
                 flushParagraph()
                 elements.add(
                     DocxElement.Image(
@@ -265,6 +297,27 @@ object OfficeParsers {
                         description = picture.description
                     )
                 )
+            }
+
+            val runXml = runXmlText(run)
+            if (runXml.isNotBlank()) {
+                val visuals = extractWordVisualElements(runXml, zip, rels, seenVisuals)
+                if (visuals.isNotEmpty()) {
+                    flushParagraph()
+                    elements.addAll(visuals)
+                }
+            }
+        }
+
+        val paragraphXml = paragraphXmlText(paragraph)
+        if (paragraphXml.isNotBlank()) {
+            // Only pick up visuals not already captured from individual runs.
+            val runXmlCombined = paragraph.runs.joinToString("") { runXmlText(it) }
+            val orphanXml = removeXmlFragmentsContainedIn(paragraphXml, runXmlCombined)
+            val orphanVisuals = extractWordVisualElements(orphanXml, zip, rels, seenVisuals)
+            if (orphanVisuals.isNotEmpty()) {
+                flushParagraph()
+                elements.addAll(orphanVisuals)
             }
         }
 
@@ -303,17 +356,24 @@ object OfficeParsers {
         runs.clear()
     }
 
-    private fun tableElement(table: XWPFTable): DocxElement.Table {
+    private fun tableElement(
+        table: XWPFTable,
+        zip: ZipFile,
+        rels: Map<String, String>,
+        seenVisuals: MutableSet<String>
+    ): DocxElement.Table {
         val rows = table.rows.map { row ->
             row.tableCells.map { cell ->
+                val content = mutableListOf<DocxElement>()
+                for (element in cell.bodyElements) {
+                    when (element) {
+                        is XWPFParagraph -> content.addAll(paragraphElements(element, zip, rels, seenVisuals))
+                        is XWPFTable -> content.add(tableElement(element, zip, rels, seenVisuals))
+                        else -> Unit
+                    }
+                }
                 DocxTableCell(
-                    text = cell.bodyElements.joinToString("\n") { element ->
-                        when (element) {
-                            is XWPFParagraph -> element.text
-                            is XWPFTable -> element.text
-                            else -> ""
-                        }
-                    }.trim(),
+                    content = content,
                     colSpan = cell.gridSpan(),
                     backgroundColor = cell.color,
                     alignment = cell.paragraphs.firstOrNull()?.alignment?.name?.lowercase()
@@ -434,16 +494,22 @@ object OfficeParsers {
         FileInputStream(filePath).use { input ->
             XMLSlideShow(input).use { slideShow ->
                 val (pageWidthEmu, pageHeightEmu) = readSlideSizeFromPptx(filePath)
-                val slides = slideShow.slides.mapIndexed { index, slide ->
-                    coroutineContext.ensureActive()
-                    val elements = buildList {
+                ZipFile(filePath).use { zip ->
+                    val relCache = mutableMapOf<Int, Map<String, String>>()
+                    val slides = slideShow.slides.mapIndexed { index, slide ->
+                        coroutineContext.ensureActive()
+                        val slideNumber = index + 1
+                        val elements = mutableListOf<SlideGraphicElement>()
+                        val seenImages = mutableSetOf<String>()
                         var fallbackTextY = 0.08f
-                        for (shape in slide.shapes) {
+
+                        for (shape in flattenShapes(slide.shapes)) {
                             val bounds = extractShapeBoundsFromXml(shape)
                             val x = ((bounds?.x ?: (0.08f * pageWidthEmu)) / pageWidthEmu).coerceIn(0f, 1f)
                             val y = ((bounds?.y ?: (fallbackTextY * pageHeightEmu)) / pageHeightEmu).coerceIn(0f, 1f)
-                            val width = ((bounds?.width ?: (0.84f * pageWidthEmu)) / pageWidthEmu).coerceIn(0f, 1f)
-                            val height = ((bounds?.height ?: (0.12f * pageHeightEmu)) / pageHeightEmu).coerceIn(0f, 1f)
+                            val width = ((bounds?.width ?: (0.84f * pageWidthEmu)) / pageWidthEmu).coerceIn(0.01f, 1f)
+                            val height = ((bounds?.height ?: (0.12f * pageHeightEmu)) / pageHeightEmu).coerceIn(0.01f, 1f)
+
                             when (shape) {
                                 is XSLFTextShape -> {
                                     val text = shape.text.orEmpty().trim()
@@ -452,7 +518,7 @@ object OfficeParsers {
                                         .firstOrNull()
                                         ?.textRuns
                                         ?.firstOrNull()
-                                    add(
+                                    elements.add(
                                         SlideGraphicElement.TextBlock(
                                             text = text,
                                             textColor = 0xFF000000,
@@ -470,44 +536,286 @@ object OfficeParsers {
                                     }
                                 }
                                 is XSLFPictureShape -> {
-                                    val bytes = shape.pictureData?.data ?: continue
-                                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: continue
-                                    add(
-                                        SlideGraphicElement.ImageBlock(
-                                            bitmap = bitmap,
-                                            x = x,
-                                            y = y,
-                                            width = width,
-                                            height = height
-                                        )
+                                    val blipId = readShapeXml(shape)?.let {
+                                        Regex("""r:embed="([^"]+)"""").find(it)?.groupValues?.getOrNull(1)
+                                    }
+                                    addImageElement(
+                                        elements = elements,
+                                        seenImages = seenImages,
+                                        bytes = shape.pictureData?.data,
+                                        extension = shape.pictureData?.fileName,
+                                        x = x,
+                                        y = y,
+                                        width = width,
+                                        height = height,
+                                        dedupeKey = blipId?.let { "blip:$slideNumber:$it" }
                                     )
                                 }
                                 is XSLFAutoShape -> {
-                                    add(
-                                        SlideGraphicElement.ShapeBlock(
-                                            shapeType = shape.shapeName ?: "shape",
-                                            color = 0xFFD9D9D9,
-                                            x = x,
-                                            y = y,
-                                            width = width,
-                                            height = height
+                                    val fillColor = extractSolidFillColor(shape)
+                                    if (fillColor != null) {
+                                        elements.add(
+                                            SlideGraphicElement.ShapeBlock(
+                                                shapeType = shape.shapeName ?: "shape",
+                                                color = fillColor,
+                                                x = x,
+                                                y = y,
+                                                width = width,
+                                                height = height
+                                            )
                                         )
+                                    }
+                                    extractBlipImagesFromShapeXml(
+                                        shape = shape,
+                                        zip = zip,
+                                        slideNumber = slideNumber,
+                                        relCache = relCache,
+                                        pageWidthEmu = pageWidthEmu,
+                                        pageHeightEmu = pageHeightEmu,
+                                        elements = elements,
+                                        seenImages = seenImages
                                     )
                                 }
                             }
                         }
+
+                        extractMediaFromSlideXml(
+                            zip = zip,
+                            slideNumber = slideNumber,
+                            relCache = relCache,
+                            pageWidthEmu = pageWidthEmu,
+                            pageHeightEmu = pageHeightEmu,
+                            elements = elements,
+                            seenImages = seenImages
+                        )
+
+                        val background = readSlideBackground(zip, slideNumber, relCache, seenImages)
+                        SlideItem(
+                            index = slideNumber,
+                            elements = elements,
+                            backgroundColor = background.color,
+                            backgroundImageBase64 = background.imageBase64,
+                            backgroundImageMime = background.imageMime
+                        )
                     }
-                    SlideItem(index + 1, elements)
-                }
-                return ParsedDocument.Slides(
-                    SlideDocument(
-                        slides = slides,
-                        pageWidthEmu = pageWidthEmu,
-                        pageHeightEmu = pageHeightEmu
+                    return ParsedDocument.Slides(
+                        SlideDocument(
+                            slides = slides,
+                            pageWidthEmu = pageWidthEmu,
+                            pageHeightEmu = pageHeightEmu
+                        )
                     )
+                }
+            }
+        }
+    }
+
+    private fun flattenShapes(shapes: List<XSLFShape>): List<XSLFShape> {
+        val flat = mutableListOf<XSLFShape>()
+        for (shape in shapes) {
+            when (shape) {
+                is XSLFGroupShape -> flat.addAll(flattenShapes(shape.shapes))
+                else -> flat.add(shape)
+            }
+        }
+        return flat
+    }
+
+    private fun addImageElement(
+        elements: MutableList<SlideGraphicElement>,
+        seenImages: MutableSet<String>,
+        bytes: ByteArray?,
+        extension: String?,
+        x: Float,
+        y: Float,
+        width: Float,
+        height: Float,
+        dedupeKey: String? = null
+    ) {
+        if (bytes == null || bytes.isEmpty()) return
+        val keys = buildList {
+            if (!dedupeKey.isNullOrBlank()) add(dedupeKey)
+        }
+        if (!registerImageKeys(seenImages, bytes, *keys.toTypedArray())) return
+
+        val mime = pictureMimeType(extension?.substringAfterLast('.', ""))
+        val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
+        elements.add(
+            SlideGraphicElement.ImageBlock(
+                base64 = base64,
+                mimeType = mime,
+                x = x,
+                y = y,
+                width = width,
+                height = height
+            )
+        )
+    }
+
+    private fun extractBlipImagesFromShapeXml(
+        shape: XSLFShape,
+        zip: ZipFile,
+        slideNumber: Int,
+        relCache: MutableMap<Int, Map<String, String>>,
+        pageWidthEmu: Float,
+        pageHeightEmu: Float,
+        elements: MutableList<SlideGraphicElement>,
+        seenImages: MutableSet<String>
+    ) {
+        val xml = readShapeXml(shape) ?: return
+        val bounds = extractBoundsFromXmlString(xml) ?: return
+        val blipId = Regex("""r:embed="([^"]+)"""").find(xml)?.groupValues?.getOrNull(1) ?: return
+        val mediaPath = resolveSlideRelationship(zip, slideNumber, blipId, relCache) ?: return
+        val bytes = readZipEntryBytes(zip, mediaPath) ?: return
+        addImageElement(
+            elements = elements,
+            seenImages = seenImages,
+            bytes = bytes,
+            extension = mediaPath,
+            x = (bounds.x / pageWidthEmu).coerceIn(0f, 1f),
+            y = (bounds.y / pageHeightEmu).coerceIn(0f, 1f),
+            width = (bounds.width / pageWidthEmu).coerceIn(0.01f, 1f),
+            height = (bounds.height / pageHeightEmu).coerceIn(0.01f, 1f),
+            dedupeKey = "blip:$slideNumber:$blipId"
+        )
+    }
+
+    private fun extractMediaFromSlideXml(
+        zip: ZipFile,
+        slideNumber: Int,
+        relCache: MutableMap<Int, Map<String, String>>,
+        pageWidthEmu: Float,
+        pageHeightEmu: Float,
+        elements: MutableList<SlideGraphicElement>,
+        seenImages: MutableSet<String>
+    ) {
+        val slideXml = readZipText(zip, "ppt/slides/slide$slideNumber.xml") ?: return
+        val picBlocks = Regex("<p:pic[\\s\\S]*?</p:pic>").findAll(slideXml)
+        for (match in picBlocks) {
+            val block = match.value
+            val bounds = extractBoundsFromXmlString(block) ?: continue
+            val blipId = Regex("""r:embed="([^"]+)"""").find(block)?.groupValues?.getOrNull(1) ?: continue
+            val mediaPath = resolveSlideRelationship(zip, slideNumber, blipId, relCache) ?: continue
+            val bytes = readZipEntryBytes(zip, mediaPath) ?: continue
+            addImageElement(
+                elements = elements,
+                seenImages = seenImages,
+                bytes = bytes,
+                extension = mediaPath,
+                x = (bounds.x / pageWidthEmu).coerceIn(0f, 1f),
+                y = (bounds.y / pageHeightEmu).coerceIn(0f, 1f),
+                width = (bounds.width / pageWidthEmu).coerceIn(0.01f, 1f),
+                height = (bounds.height / pageHeightEmu).coerceIn(0.01f, 1f),
+                dedupeKey = "blip:$slideNumber:$blipId"
+            )
+        }
+    }
+
+    private fun readSlideBackground(
+        zip: ZipFile,
+        slideNumber: Int,
+        relCache: MutableMap<Int, Map<String, String>>,
+        seenImages: MutableSet<String>
+    ): SlideBackground {
+        val slideXml = readZipText(zip, "ppt/slides/slide$slideNumber.xml") ?: return SlideBackground()
+        val bgBlock = Regex("<p:bg>[\\s\\S]*?</p:bg>").find(slideXml)?.value.orEmpty()
+        if (bgBlock.isEmpty()) return SlideBackground()
+
+        val colorHex = Regex("""<a:srgbClr val="([0-9A-Fa-f]{6})"""")
+            .find(bgBlock)
+            ?.groupValues
+            ?.getOrNull(1)
+        val color = colorHex?.toLongOrNull(16)?.let { 0xFF000000 or it } ?: 0xFFFFFFFF
+
+        val blipId = Regex("""r:embed="([^"]+)"""").find(bgBlock)?.groupValues?.getOrNull(1)
+        if (blipId != null) {
+            val mediaPath = resolveSlideRelationship(zip, slideNumber, blipId, relCache)
+            val bytes = mediaPath?.let { readZipEntryBytes(zip, it) }
+            if (bytes != null && bytes.isNotEmpty()) {
+                registerImageKeys(seenImages, bytes, "blip:$slideNumber:$blipId", "bg:$slideNumber")
+                return SlideBackground(
+                    color = color,
+                    imageBase64 = Base64.encodeToString(bytes, Base64.NO_WRAP),
+                    imageMime = pictureMimeType(mediaPath.substringAfterLast('.', ""))
                 )
             }
         }
+        return SlideBackground(color = color)
+    }
+
+    private data class SlideBackground(
+        val color: Long = 0xFFFFFFFF,
+        val imageBase64: String? = null,
+        val imageMime: String? = null
+    )
+
+    private fun resolveSlideRelationship(
+        zip: ZipFile,
+        slideNumber: Int,
+        relId: String,
+        relCache: MutableMap<Int, Map<String, String>>
+    ): String? {
+        val rels = relCache.getOrPut(slideNumber) {
+            val relXml = readZipText(zip, "ppt/slides/_rels/slide$slideNumber.xml.rels") ?: return@getOrPut emptyMap()
+            Regex("""<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"""")
+                .findAll(relXml)
+                .associate { it.groupValues[1] to it.groupValues[2] }
+        }
+        val target = rels[relId] ?: return null
+        return normalizePptxPath("ppt/slides/$target")
+    }
+
+    private fun normalizePptxPath(path: String): String {
+        val parts = mutableListOf<String>()
+        for (segment in path.replace("\\", "/").split("/")) {
+            when (segment) {
+                "", "." -> Unit
+                ".." -> if (parts.isNotEmpty()) parts.removeAt(parts.lastIndex)
+                else -> parts.add(segment)
+            }
+        }
+        return parts.joinToString("/")
+    }
+
+    private fun readZipText(zip: ZipFile, entryPath: String): String? {
+        val entry = zip.getEntry(entryPath) ?: return null
+        return zip.getInputStream(entry).bufferedReader().use { it.readText() }
+    }
+
+    private fun readZipEntryBytes(zip: ZipFile, entryPath: String): ByteArray? {
+        val entry = zip.getEntry(entryPath) ?: return null
+        return zip.getInputStream(entry).use { it.readBytes() }
+    }
+
+    private fun readShapeXml(shape: XSLFShape): String? {
+        return try {
+            val method = shape.javaClass.methods.firstOrNull { it.name == "getXmlObject" } ?: return null
+            method.invoke(shape)?.toString()
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    private fun extractSolidFillColor(shape: XSLFAutoShape): Long? {
+        val xml = readShapeXml(shape) ?: return null
+        val hex = Regex("""<a:srgbClr val="([0-9A-Fa-f]{6})"""")
+            .find(xml)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?: return null
+        return 0xFF000000 or hex.toLong(16)
+    }
+
+    private fun extractBoundsFromXmlString(xml: String): ShapeBounds? {
+        val xfrmMatch = Regex("<(?:a|p):xfrm[\\s\\S]*?</(?:a|p):xfrm>").findAll(xml).lastOrNull()?.value ?: xml
+        val offTag = Regex("<(?:a|p):off[^>]*/?>").find(xfrmMatch)?.value.orEmpty()
+        val extTag = Regex("<(?:a|p):ext[^>]*/?>").find(xfrmMatch)?.value.orEmpty()
+        val x = Regex("""\bx="(-?\d+)"""").find(offTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: 0f
+        val y = Regex("""\by="(-?\d+)"""").find(offTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: 0f
+        val width = Regex("""\bcx="(\d+)"""").find(extTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: return null
+        val height = Regex("""\bcy="(\d+)"""").find(extTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: return null
+        if (width <= 0f || height <= 0f) return null
+        return ShapeBounds(x = x, y = y, width = width, height = height)
     }
 
     private data class ShapeBounds(
@@ -518,21 +826,8 @@ object OfficeParsers {
     )
 
     private fun extractShapeBoundsFromXml(shape: XSLFShape): ShapeBounds? {
-        val xml = try {
-            val method = shape.javaClass.methods.firstOrNull { it.name == "getXmlObject" } ?: return null
-            method.invoke(shape)?.toString().orEmpty()
-        } catch (_: Throwable) {
-            return null
-        }
-        val xfrmMatch = Regex("<(?:a|p):xfrm[\\s\\S]*?</(?:a|p):xfrm>").find(xml)?.value ?: xml
-        val offTag = Regex("<(?:a|p):off[^>]*/?>").find(xfrmMatch)?.value.orEmpty()
-        val extTag = Regex("<(?:a|p):ext[^>]*/?>").find(xfrmMatch)?.value.orEmpty()
-        val x = Regex("""\bx="(-?\d+)"""").find(offTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: 0f
-        val y = Regex("""\by="(-?\d+)"""").find(offTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: 0f
-        val width = Regex("""\bcx="(\d+)"""").find(extTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: return null
-        val height = Regex("""\bcy="(\d+)"""").find(extTag)?.groupValues?.getOrNull(1)?.toFloatOrNull() ?: return null
-        if (width <= 0f || height <= 0f) return null
-        return ShapeBounds(x = x, y = y, width = width, height = height)
+        val xml = readShapeXml(shape) ?: return null
+        return extractBoundsFromXmlString(xml)
     }
 
     private fun readSlideSizeFromPptx(filePath: String): Pair<Float, Float> {
@@ -601,8 +896,206 @@ object OfficeParsers {
             "bmp" -> "image/bmp"
             "webp" -> "image/webp"
             "svg" -> "image/svg+xml"
+            "emf" -> "image/x-emf"
+            "wmf" -> "image/x-wmf"
             else -> "image/png"
         }
+    }
+
+    private fun runXmlText(run: org.apache.poi.xwpf.usermodel.XWPFRun): String {
+        return try {
+            run.ctr.xmlText()
+        } catch (_: Throwable) {
+            run.ctr.toString()
+        }
+    }
+
+    private fun paragraphXmlText(paragraph: XWPFParagraph): String {
+        return try {
+            paragraph.ctp.xmlText()
+        } catch (_: Throwable) {
+            paragraph.ctp.toString()
+        }
+    }
+
+    private fun buildWordRelationshipMap(zip: ZipFile, relsPath: String): Map<String, String> {
+        val relXml = readZipText(zip, relsPath) ?: return emptyMap()
+        val baseDir = relsPath.substringBefore("_rels/").trimEnd('/')
+        return Regex("""<Relationship[^>]*Id="([^"]+)"[^>]*Target="([^"]+)"""")
+            .findAll(relXml)
+            .associate { match ->
+                val target = match.groupValues[2]
+                val resolved = if (target.startsWith("/")) {
+                    target.removePrefix("/")
+                } else {
+                    normalizeOoxmlPath("$baseDir/$target")
+                }
+                match.groupValues[1] to resolved
+            }
+    }
+
+    private fun relationshipMapForPart(zip: ZipFile, part: XWPFHeaderFooter): Map<String, String> {
+        val partName = part.packagePart.partName.name.removePrefix("/")
+        val relsPath = "${partName.substringBeforeLast('/')}/_rels/${partName.substringAfterLast('/')}.rels"
+        return buildWordRelationshipMap(zip, relsPath)
+    }
+
+    private fun normalizeOoxmlPath(path: String): String {
+        val parts = mutableListOf<String>()
+        for (segment in path.replace("\\", "/").split("/")) {
+            when (segment) {
+                "", "." -> Unit
+                ".." -> if (parts.isNotEmpty()) parts.removeAt(parts.lastIndex)
+                else -> parts.add(segment)
+            }
+        }
+        return parts.joinToString("/")
+    }
+
+    private fun extractWordVisualElements(
+        xml: String,
+        zip: ZipFile,
+        rels: Map<String, String>,
+        seenVisuals: MutableSet<String>
+    ): List<DocxElement> {
+        if (xml.isBlank()) return emptyList()
+        val elements = mutableListOf<DocxElement>()
+        val alternateBlocks = Regex("<mc:AlternateContent>[\\s\\S]*?</mc:AlternateContent>")
+            .findAll(xml)
+            .map { it.value }
+            .toList()
+        var stripped = xml
+        for (block in alternateBlocks) {
+            elements.addAll(extractWordVisualBlock(block, zip, rels, seenVisuals))
+            stripped = stripped.replace(block, "")
+        }
+        Regex("<w:drawing>[\\s\\S]*?</w:drawing>").findAll(stripped).forEach {
+            elements.addAll(extractWordVisualBlock(it.value, zip, rels, seenVisuals))
+        }
+        Regex("<w:pict>[\\s\\S]*?</w:pict>").findAll(stripped).forEach {
+            elements.addAll(extractWordVisualBlock(it.value, zip, rels, seenVisuals))
+        }
+        Regex("<w:object>[\\s\\S]*?</w:object>").findAll(stripped).forEach {
+            elements.addAll(extractWordVisualBlock(it.value, zip, rels, seenVisuals))
+        }
+        return elements
+    }
+
+    private fun extractWordVisualBlock(
+        block: String,
+        zip: ZipFile,
+        rels: Map<String, String>,
+        seenVisuals: MutableSet<String>
+    ): List<DocxElement> {
+        val (width, height) = wordDrawingExtentToPx(block)
+        val elements = mutableListOf<DocxElement>()
+        var foundImage = false
+
+        val blipIds = mutableListOf<String>()
+        Regex("""r:embed="([^"]+)"""").findAll(block).forEach { blipIds.add(it.groupValues[1]) }
+        Regex("""v:imagedata[^>]*r:id="([^"]+)"""").findAll(block).forEach { blipIds.add(it.groupValues[1]) }
+
+        for (relId in blipIds.distinct()) {
+            val mediaPath = rels[relId]
+            if (mediaPath != null && mediaPath.contains("/charts/") && mediaPath.endsWith(".xml", ignoreCase = true)) {
+                val chartImage = extractChartPreviewImage(zip, mediaPath)
+                if (chartImage != null) {
+                    val chartBytes = Base64.decode(chartImage.first, Base64.NO_WRAP)
+                    if (registerImageKeys(seenVisuals, chartBytes, "rel:$relId", "chart:$relId")) {
+                        foundImage = true
+                        elements.add(
+                            DocxElement.Image(
+                                base64 = chartImage.first,
+                                mimeType = chartImage.second,
+                                width = width,
+                                height = height,
+                                description = "Chart"
+                            )
+                        )
+                    }
+                }
+                continue
+            }
+            if (mediaPath != null && mediaPath.endsWith(".xml", ignoreCase = true) && !mediaPath.contains("/media/")) {
+                continue
+            }
+            val bytes = mediaPath?.let { readZipEntryBytes(zip, it) } ?: continue
+            if (bytes.isEmpty()) continue
+            if (!registerImageKeys(seenVisuals, bytes, "rel:$relId")) continue
+            foundImage = true
+            elements.add(
+                DocxElement.Image(
+                    base64 = Base64.encodeToString(bytes, Base64.NO_WRAP),
+                    mimeType = pictureMimeType(mediaPath.substringAfterLast('.', "")),
+                    width = width,
+                    height = height,
+                    description = Regex("""o:title="([^"]*)"""").find(block)?.groupValues?.getOrNull(1)
+                )
+            )
+        }
+
+        val isChart = block.contains("<c:chart") ||
+            block.contains("drawingml/2006/chart") ||
+            block.contains("ProgID=\"Excel.Chart") ||
+            block.contains("ProgID=\"MSGraph.Chart")
+        val isDiagram = block.contains("drawingml/2006/diagram") ||
+            block.contains("ProgID=\"SmartArt")
+
+        if (!foundImage && (isChart || isDiagram)) {
+            val chartKey = "chart:${block.hashCode()}:$width:$height"
+            if (seenVisuals.add(chartKey)) {
+                elements.add(
+                    DocxElement.Chart(
+                        width = width,
+                        height = height,
+                        title = Regex("""o:title="([^"]+)"""").find(block)?.groupValues?.getOrNull(1)
+                            ?: if (isDiagram) "Diagram" else "Chart"
+                    )
+                )
+            }
+        }
+        return elements
+    }
+
+    private fun wordDrawingExtentToPx(xml: String): Pair<Double, Double> {
+        val extentTag = Regex("<wp:extent[^>]*/>").find(xml)?.value
+            ?: Regex("<wp:extent[^>]*>[\\s\\S]*?</wp:extent>").find(xml)?.value
+            ?: Regex("<v:shape[^>]*/>").find(xml)?.value
+        val cx = extentTag?.let { Regex("""\bcx="(\d+)"""").find(it)?.groupValues?.getOrNull(1)?.toDoubleOrNull() }
+            ?: extentTag?.let { Regex("""\bwidth="([\d.]+)"""").find(it)?.groupValues?.getOrNull(1)?.toDoubleOrNull()?.times(9525.0) }
+        val cy = extentTag?.let { Regex("""\bcy="(\d+)"""").find(it)?.groupValues?.getOrNull(1)?.toDoubleOrNull() }
+            ?: extentTag?.let { Regex("""\bheight="([\d.]+)"""").find(it)?.groupValues?.getOrNull(1)?.toDoubleOrNull()?.times(9525.0) }
+        return normalizeWordImageSize(cx ?: 0.0) to normalizeWordImageSize(cy ?: 0.0)
+    }
+
+    private fun extractChartPreviewImage(zip: ZipFile, chartXmlPath: String): Pair<String, String>? {
+        val chartDir = chartXmlPath.substringBeforeLast('/')
+        val chartFile = chartXmlPath.substringAfterLast('/')
+        val chartRelsPath = "$chartDir/_rels/$chartFile.rels"
+        val chartRels = buildWordRelationshipMap(zip, chartRelsPath)
+        for ((_, target) in chartRels) {
+            if (!target.contains("media/") && !target.matches(Regex(".*\\.(png|jpe?g|gif|bmp|webp)$", RegexOption.IGNORE_CASE))) {
+                continue
+            }
+            val bytes = readZipEntryBytes(zip, target) ?: continue
+            if (bytes.isEmpty()) continue
+            return Base64.encodeToString(bytes, Base64.NO_WRAP) to
+                pictureMimeType(target.substringAfterLast('.', ""))
+        }
+
+        val chartXml = readZipText(zip, chartXmlPath) ?: return null
+        val userShapesBlip = Regex("""r:embed="([^"]+)"""").find(chartXml)?.groupValues?.getOrNull(1)
+        if (userShapesBlip != null) {
+            val mediaPath = chartRels[userShapesBlip]
+            if (mediaPath != null) {
+                val bytes = readZipEntryBytes(zip, mediaPath) ?: return null
+                if (bytes.isNotEmpty()) {
+                    return Base64.encodeToString(bytes, Base64.NO_WRAP) to
+                        pictureMimeType(mediaPath.substringAfterLast('.', ""))
+                }
+            }
+        }
+        return null
     }
 
     private fun parseDocxFallback(filePath: String, note: String): ParsedDocument.Word {
@@ -705,6 +1198,45 @@ object OfficeParsers {
         if (rawValue <= 0) return 0.0
         // POI may expose image dimensions in EMU for DOCX.
         return if (rawValue > 2000) rawValue / Units.EMU_PER_PIXEL else rawValue
+    }
+
+    /** Returns true when the image is new and should be added. */
+    private fun registerImageKeys(seen: MutableSet<String>, bytes: ByteArray, vararg keys: String): Boolean {
+        val fingerprint = imageBytesKey(bytes)
+        val allKeys = (keys.toList() + fingerprint).distinct()
+        if (allKeys.any { it in seen }) return false
+        seen.addAll(allKeys)
+        return true
+    }
+
+    private fun imageBytesKey(bytes: ByteArray): String {
+        var hash = 1
+        val sampleSize = minOf(bytes.size, 512)
+        for (i in 0 until sampleSize) {
+            hash = 31 * hash + bytes[i]
+        }
+        if (bytes.size > sampleSize) {
+            for (i in bytes.size - sampleSize until bytes.size) {
+                hash = 31 * hash + bytes[i]
+            }
+        }
+        return "bytes:${bytes.size}:$hash"
+    }
+
+    private fun removeXmlFragmentsContainedIn(outerXml: String, innerXml: String): String {
+        if (innerXml.isBlank()) return outerXml
+        var result = outerXml
+        listOf(
+            Regex("<w:drawing>[\\s\\S]*?</w:drawing>"),
+            Regex("<w:pict>[\\s\\S]*?</w:pict>"),
+            Regex("<w:object>[\\s\\S]*?</w:object>"),
+            Regex("<mc:AlternateContent>[\\s\\S]*?</mc:AlternateContent>")
+        ).forEach { pattern ->
+            pattern.findAll(innerXml).forEach { match ->
+                result = result.replace(match.value, "")
+            }
+        }
+        return result
     }
 
     private fun twipsToPx(twips: Int): Int {

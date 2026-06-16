@@ -9,7 +9,7 @@ import PDFKit
 /// - Pinch-to-zoom
 /// - Page navigation thumbnails
 /// - Customised dark-themed navigation bar
-final class PDFViewerViewController: UIViewController {
+final class PDFViewerViewController: UIViewController, DockitFeatureConfigurable {
 
     // MARK: - Properties
 
@@ -17,6 +17,7 @@ final class PDFViewerViewController: UIViewController {
     private var pdfView: PDFView!
     private var thumbnailView: PDFThumbnailView!
     private var pageLabel: UILabel!
+    private var dockitFeatures = DockitFeatures(searchEnabled: true, zoomEnabled: true, darkModeEnabled: false)
 
     // MARK: - Init
 
@@ -32,6 +33,7 @@ final class PDFViewerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        applyFeatureState()
         loadPDF()
     }
 
@@ -124,6 +126,50 @@ final class PDFViewerViewController: UIViewController {
         guard let doc = pdfView.document, let current = pdfView.currentPage else { return }
         let index = doc.index(for: current) + 1
         pageLabel.text = "\(index) / \(doc.pageCount)"
+    }
+
+    func applyDockitFeatures(_ features: DockitFeatures) {
+        dockitFeatures = features
+        guard isViewLoaded else { return }
+        applyFeatureState()
+    }
+
+    private func applyFeatureState() {
+        pageLabel.isHidden = false
+        thumbnailView.isHidden = false
+        if dockitFeatures.zoomEnabled {
+            pdfView.autoScales = true
+            pdfView.minScaleFactor = pdfView.scaleFactorForSizeToFit * 0.5
+            pdfView.maxScaleFactor = pdfView.scaleFactorForSizeToFit * 4.0
+        } else {
+            pdfView.autoScales = false
+            let fit = pdfView.scaleFactorForSizeToFit
+            pdfView.minScaleFactor = fit
+            pdfView.maxScaleFactor = fit
+            pdfView.scaleFactor = fit
+        }
+        refreshToolbarItems()
+    }
+
+    private func refreshToolbarItems() {
+        guard dockitFeatures.zoomEnabled else {
+            navigationItem.rightBarButtonItems = nil
+            return
+        }
+        navigationItem.rightBarButtonItems = [
+            UIBarButtonItem(image: UIImage(systemName: "minus.magnifyingglass"), style: .plain, target: self, action: #selector(zoomOut)),
+            UIBarButtonItem(image: UIImage(systemName: "plus.magnifyingglass"), style: .plain, target: self, action: #selector(zoomIn)),
+        ]
+    }
+
+    @objc private func zoomIn() {
+        guard dockitFeatures.zoomEnabled else { return }
+        pdfView.scaleFactor = min(pdfView.scaleFactor * 1.2, pdfView.maxScaleFactor)
+    }
+
+    @objc private func zoomOut() {
+        guard dockitFeatures.zoomEnabled else { return }
+        pdfView.scaleFactor = max(pdfView.scaleFactor / 1.2, pdfView.minScaleFactor)
     }
 
     private func showError(_ message: String) {
