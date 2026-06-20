@@ -144,14 +144,6 @@ Current Android app bar controls:
 
 ---
 
-## 🏗 Architecture Under the Hood
-
-To keep the codebase maintainable and performant, the native code is split using the Strategy Pattern:
-
-* **Android**: `UniversalDockitPlugin` handles dispatching. All documents use `DocumentViewerActivity`, which acts as a host and dispatches rendering to specific `DocumentRenderer` implementations (e.g., `WordDocumentRenderer`, `PdfDocumentRenderer`, `EpubDocumentRenderer`). Communication is handled via a `RenderCallbacks` interface. Office files are parsed natively with Apache POI, then converted to renderer-friendly HTML with compatibility fallbacks for problematic legacy/strict files.
-* **iOS**: `UniversalDockitPlugin.swift` routes requests to dedicated `UIViewController` subclasses (e.g., `PDFViewerViewController`, `XLSXViewerViewController`, `EpubViewerViewController`).
-
----
 
 ## 🤝 Contributing and Feedback
 
