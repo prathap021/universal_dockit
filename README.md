@@ -8,9 +8,6 @@
 
 
 **Universal Dockit** leverages the best open-source native SDKs and built-in OS frameworks to render documents quickly and beautifully, keeping the Flutter layer minimal and efficient. 
-
-Absolutely **no commercial dependencies**, **no cloud processing**, and **100% on-device rendering**.
-
 ---
 
 ## ✨ Features
