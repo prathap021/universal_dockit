@@ -15,9 +15,7 @@
 * **Universal Format Support**: Open 15 different document types including PDF, Word, Excel, PowerPoint, EPUB, CBZ, Text, CSV, RTF, and OpenDocument formats.
 * **Native Performance**: Documents are rendered natively using optimized libraries like `PdfiumAndroid` on Android and `PDFKit`/`QuickLook` on iOS.
 * **Native Office Parsing**: Word, Excel, and PowerPoint files are parsed on-device with Apache POI and rendered into native WebView-friendly HTML.
-* **Smart Rendering**: Formula evaluation in spreadsheets, merged-cell support, Office compatibility fallbacks, native zooming for documents, and HTML structural extraction for E-Books/Comic Books.
-* **Feature-Gated Viewer Controls**: Android viewer actions are controlled only via method-channel feature flags (Search, Zoom, Dark Mode toggle).
-* **Fully Offline**: Everything is parsed and rendered entirely on the device without cloud APIs or heavy monolithic frameworks.
+
 
 ---
 
