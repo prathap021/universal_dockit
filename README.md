@@ -7,8 +7,6 @@
 > ⚠️ **Notice:** This plugin is currently under **Beta version**. APIs, UI, and rendering behavior may change as we continue to improve support for various document types.
 
 
-A powerful, high-performance Flutter plugin for viewing a wide variety of documents natively on Android and iOS. 
-
 **Universal Dockit** leverages the best open-source native SDKs and built-in OS frameworks to render documents quickly and beautifully, keeping the Flutter layer minimal and efficient. 
 
 Absolutely **no commercial dependencies**, **no cloud processing**, and **100% on-device rendering**.
