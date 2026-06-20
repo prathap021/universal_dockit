@@ -53,7 +53,7 @@ Add `universal_dockit` to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  universal_dockit:
+  universal_dockit: ^1.0.1
 ```
 
 ### 🤖 Android Setup
