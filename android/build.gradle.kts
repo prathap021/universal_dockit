@@ -9,7 +9,7 @@ buildscript {
         maven { url = uri("https://jitpack.io") }
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:9.0.1")
+        classpath("com.android.tools.build:gradle:9.1.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
 }
@@ -25,16 +25,21 @@ allprojects {
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android") version "2.3.20"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.3.20"
 }
 
 android {
     namespace = "com.prathap021.universal_dockit"
-    compileSdk = 36
+    compileSdk = 37
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     sourceSets {
@@ -103,6 +108,16 @@ dependencies {
     // Lifecycle aware ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.activity:activity-ktx:1.9.3")
+
+    // Compose dependencies
+    val composeBom = platform("androidx.compose:compose-bom:2024.04.01")
+    implementation(composeBom)
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.9.0")
+
+    // OpenOfficeKit
+    implementation("com.github.prathap021:Open-Office-kit:v0.1.0-beta")
 
     // -------------------------------------------------------------------------
     // PdfiumAndroid — open-source PDF rendering (via barteksc android-pdf-viewer)

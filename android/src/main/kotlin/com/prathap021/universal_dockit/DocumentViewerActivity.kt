@@ -12,6 +12,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import androidx.lifecycle.lifecycleScope
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
@@ -29,8 +30,10 @@ import com.prathap021.universal_dockit.renderers.TxtDocumentRenderer
 import com.github.barteksc.pdfviewer.PDFView
 import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.activity.compose.setContent
 
 /**
  * DocumentViewerActivity — single host Activity that swaps between three viewers
@@ -111,8 +114,70 @@ class DocumentViewerActivity : AppCompatActivity(), RenderCallbacks {
     // ── Dispatcher ─────────────────────────────────────────────────────────
 
     private fun dispatch(filePath: String, docType: String) {
+        val dt = docType.lowercase()
+        if (dt in listOf("doc", "docx", "xls", "xlsx", "ppt", "pptx")) {
+            renderWithOpenOfficeKit(filePath, dt)
+        } else {
+            showLoading()
+            viewModel.renderDocument(filePath, docType, this)
+        }
+    }
+
+    private fun renderWithOpenOfficeKit(filePath: String, docType: String) {
         showLoading()
-        viewModel.renderDocument(filePath, docType, this)
+        val officeSDK = com.poirender.sdk.PoiRenderSDK.init(this)
+        val fileUri = android.net.Uri.fromFile(java.io.File(filePath))
+        
+        lifecycleScope.launch {
+            when (docType) {
+                "doc", "docx" -> {
+                    officeSDK.parseDocx(fileUri, { progress ->
+                        // Optionally update loading text
+                    }).onSuccess { pages ->
+                        hideContent()
+                        loadingContainer.isVisible = false
+                        setContent {
+                            com.poirender.sdk.renderer.DocxRenderer(
+                                pages = pages,
+                                searchQuery = ""
+                            )
+                        }
+                    }.onFailure { error ->
+                        showError("Error parsing DOCX: ${error.message}")
+                    }
+                }
+                "xls", "xlsx" -> {
+                    officeSDK.parseExcel(fileUri, { progress ->
+                    }).onSuccess { workbookData ->
+                        hideContent()
+                        loadingContainer.isVisible = false
+                        setContent {
+                            com.poirender.sdk.renderer.ExcelRenderer(
+                                workbookData = workbookData,
+                                searchQuery = ""
+                            )
+                        }
+                    }.onFailure { error ->
+                        showError("Error parsing Excel: ${error.message}")
+                    }
+                }
+                "ppt", "pptx" -> {
+                    officeSDK.parsePptx(fileUri, { progress ->
+                    }).onSuccess { slides ->
+                        hideContent()
+                        loadingContainer.isVisible = false
+                        setContent {
+                            com.poirender.sdk.renderer.PptxRenderer(
+                                slides = slides,
+                                searchQuery = ""
+                            )
+                        }
+                    }.onFailure { error ->
+                        showError("Error parsing PPTX: ${error.message}")
+                    }
+                }
+            }
+        }
     }
 
     // ── RenderCallbacks ────────────────────────────────────────────────────

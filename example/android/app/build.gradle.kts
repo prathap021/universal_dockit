@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.prathap021.universal_dockit_example"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
